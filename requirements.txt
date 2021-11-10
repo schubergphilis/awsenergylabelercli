@@ -1,0 +1,2 @@
+boto3~=1.19.12
+awsenergylabelerlib~=0.1.1
