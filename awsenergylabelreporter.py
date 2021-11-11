@@ -58,10 +58,11 @@ class EnergyLabelExporter:
     def _prepare_export_data(self):
         if self._export_data is None:
             self._export_data = [
-                EnergyLabelFileData(FILENAMES['energy_label'],
-                                    [{'Landing Zone': self.energy_labeler.landing_zone_name,
-                                      'Landing Zone Energy Label': self.energy_labeler.energy_label_of_landing_zone}]
-                                    ),
+                EnergyLabelFileData(
+                    FILENAMES['energy_label'],
+                    [{'Landing Zone': self.energy_labeler.landing_zone_name,
+                      'Landing Zone Energy Label': self.energy_labeler.energy_label_of_landing_zone}]
+                ),
                 EnergyLabelFileData(
                     FILENAMES['findings'],
                     [finding for finding in self.energy_labeler.get_findings_data_for_frameworks]
