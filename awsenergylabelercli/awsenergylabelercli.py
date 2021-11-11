@@ -47,7 +47,6 @@ import coloredlogs
 
 from awsenergylabelerlib import EnergyLabeler
 
-
 __author__ = '''Theodoor Scholte <tscholte@schubergphilis.com>'''
 __docformat__ = '''google'''
 __date__ = '''11-11-2021'''
@@ -139,16 +138,16 @@ class DataExporter:
         for out_file in export_data:
             out_file.export_as_json_to_fs(s3_url)
 
+    @staticmethod
+    def is_s3_url(url):
+        """Is the url an S3 resource."""
+        return urlparse(url).scheme == "s3"
 
-def is_s3_url(url):
-    """Is the url an S3 resource."""
-    return urlparse(url).scheme == "s3"
-
-
-def is_directory_path(path):
-    """Is the path a directory."""
-    parsed_url = urlparse(path)
-    return parsed_url.scheme == "" and parsed_url.netloc == "" and len(parsed_url.path) >= 1
+    @staticmethod
+    def is_directory_path(path):
+        """Is the path a directory."""
+        parsed_url = urlparse(path)
+        return parsed_url.scheme == "" and parsed_url.netloc == "" and len(parsed_url.path) >= 1
 
 
 def get_arguments():
@@ -253,9 +252,9 @@ def main():
                             deny_list=args.denylist)
     if args.export:
         exporter = DataExporter(labeler)
-        if is_s3_url(args.export):
+        if DataExporter.is_s3_url(args.export):
             exporter.export_as_json_to_s3(args.export)
-        elif is_directory_path(args.export):
+        elif DataExporter.is_directory_path(args.export):
             exporter.export_as_json_to_fs(args.export)
         else:
             LOGGER.error(f'{args.export} is an invalid path. Example --export /a/directory or --export s3://mybucket/'
