@@ -150,6 +150,10 @@ class DataExporter:
         return parsed_url.scheme == "" and parsed_url.netloc == "" and len(parsed_url.path) >= 1
 
 
+def fs_or_s3(export_location):
+    return DataExporter.is_directory_path(export_location) or DataExporter.is_s3_url(export_location)
+
+
 def get_arguments():
     """
     Gets us the cli arguments.
@@ -200,7 +204,7 @@ def get_arguments():
                               help='A list of AWS Account IDs that will be excluded from producing the energy label.')
     parser.add_argument('--export',
                         default='',
-                        type=str,
+                        type=fs_or_s3,
                         required=False,
                         help='Exports a snapshot of the reporting data in '
                              'JSON formatted files to the specified directory or S3 location.')
