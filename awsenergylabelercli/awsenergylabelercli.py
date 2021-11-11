@@ -141,7 +141,8 @@ class DataExporter:
     @staticmethod
     def is_s3_url(url):
         """Is the url an S3 resource."""
-        return urlparse(url).scheme == "s3"
+        parsed_url = urlparse(url)
+        return parsed_url.scheme == "s3" and len(parsed_url.path) >= 1
 
     @staticmethod
     def is_directory_path(path):
@@ -150,8 +151,13 @@ class DataExporter:
         return parsed_url.scheme == "" and parsed_url.netloc == "" and len(parsed_url.path) >= 1
 
 
-def fs_or_s3(export_location):
-    return DataExporter.is_directory_path(export_location) or DataExporter.is_s3_url(export_location)
+def is_fs_or_s3(export_location):
+    if DataExporter.is_directory_path(export_location) or DataExporter.is_s3_url(export_location):
+        return True
+    else:
+        raise argparse.ArgumentTypeError(
+            f'{export_location} is an invalid export location. '
+            f'Example --export /a/directory or --export s3://mybucket/ location')
 
 
 def get_arguments():
@@ -204,11 +210,15 @@ def get_arguments():
                               help='A list of AWS Account IDs that will be excluded from producing the energy label.')
     parser.add_argument('--export',
                         default='',
-                        type=fs_or_s3,
+                        type=is_fs_or_s3,
                         required=False,
                         help='Exports a snapshot of the reporting data in '
                              'JSON formatted files to the specified directory or S3 location.')
-    args = parser.parse_args()
+    try:
+        args = parser.parse_args()
+    except argparse.ArgumentTypeError:
+        print('Invalid arguments provided, cannot continue.')
+        raise SystemExit(1)
     return args
 
 
@@ -258,12 +268,9 @@ def main():
         exporter = DataExporter(labeler)
         if DataExporter.is_s3_url(args.export):
             exporter.export_as_json_to_s3(args.export)
-        elif DataExporter.is_directory_path(args.export):
-            exporter.export_as_json_to_fs(args.export)
         else:
-            LOGGER.error(f'{args.export} is an invalid path. Example --export /a/directory or --export s3://mybucket/'
-                         f'location')
-            raise SystemExit(1)
+            exporter.export_as_json_to_fs(args.export)
+
     print(f'Landing Zone: {args.landingzone_name}')
     print(f'Landing Zone Security Score: {labeler.landing_zone_energy_label}')
     print(f'Labeled Accounts Security Score: {labeler.labeled_accounts_energy_label}')
