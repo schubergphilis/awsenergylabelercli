@@ -18,10 +18,31 @@ FILENAMES = {
 }
 
 
-@dataclass
-class ExportConfiguration:
-    filename: str
-    data: []
+class EnergyLabelFileExport:
+
+    def __init__(self, filename, data):
+        self.filename = filename
+        self.data = data
+
+    def export_as_json_to_fs(self, directory):
+        if not (os.path.exists(directory)):
+            os.makedirs(directory)
+        filepath = os.path.join(directory, self.filename)
+        with open(filepath, 'w') as jsonfile:
+            json.dump(self.data, jsonfile, indent=2, default=str)
+
+    def export_as_json_to_s3(self, s3_url):
+        s3 = boto3.client('s3')
+        parsed_url = urlparse.urlparse(s3_url)
+        bucket_name = parsed_url.netloc
+        dst_path = parsed_url.path
+
+        with tempfile.NamedTemporaryFile() as temp_file:
+            temp_file.write(self.data)
+            temp_file.flush()
+            dst_filename = urljoin(dst_path, self.filename)
+            s3.upload_file(temp_file.name, bucket_name, dst_filename)
+            temp_file.close()
 
 
 class EnergyLabelReporter:
@@ -48,28 +69,6 @@ class EnergyLabelReporter:
     def print_to_console(self):
         print(
             f"The Landing Zone named {self.landing_zone_name} has a security score of: {self.labeler.energy_label_of_landing_zone}")
-
-    def export_as_json_to_fs(self, directory):
-        if not (os.path.exists(directory)):
-            os.makedirs(directory)
-        for entry in self.export_configurations:
-            filepath = os.path.join(directory, entry.filename)
-            with open(filepath, 'w') as jsonfile:
-                json.dump(entry.data, jsonfile, indent=2, default=str)
-
-    def export_as_json_to_s3(self, s3_url):
-        s3 = boto3.client('s3')
-        parsed_url = urlparse.urlparse(s3_url)
-        bucket_name = parsed_url.netloc
-        dst_path = parsed_url.path
-
-        for entry in self.export_configurations:
-            with tempfile.NamedTemporaryFile() as temp_file:
-                temp_file.write(entry.data)
-                temp_file.flush()
-                dst_filename = urljoin(dst_path, entry.filename)
-                s3.upload_file(temp_file.name, bucket_name, dst_filename)
-                temp_file.close()
 
 
 def is_s3_url(url):
