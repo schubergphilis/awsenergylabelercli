@@ -202,10 +202,10 @@ def get_arguments():
                         help='The list of applicable frameworks: [aws-foundational-security-best-practices, cis], '
                              'default=aws-foundational-security-best-practices')
     account_list = parser.add_mutually_exclusive_group()
-    account_list.add_argument('--allowlist',
+    account_list.add_argument('--allow-list',
                               nargs='*',
                               help='A list of AWS Account IDs for which an energy label will be produced.')
-    account_list.add_argument('--denylist',
+    account_list.add_argument('--deny-list',
                               nargs='*',
                               help='A list of AWS Account IDs that will be excluded from producing the energy label.')
     parser.add_argument('--export',
