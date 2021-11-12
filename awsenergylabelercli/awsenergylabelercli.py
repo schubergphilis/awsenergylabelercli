@@ -135,7 +135,7 @@ class EnergyLabelingData:  # pylint: disable=too-few-public-methods
     def json(self):
         """Data to json."""
         return json.dumps([{'Landing Zone Name': self._labeler.landing_zone_name,
-                            'Landing Zone Energy Label': self._labeler.energy_label_of_landing_zone}],
+                            'Landing Zone Energy Label': self._labeler.landing_zone_energy_label}],
                           indent=2, default=str)
 
 
