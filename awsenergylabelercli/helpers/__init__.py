@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# File: awsenergylabelercliexceptions.py
+# File: __init__.py
 #
 # Copyright 2021 Theodoor Scholte
 #
@@ -24,23 +24,24 @@
 #
 
 """
-Custom exception code for awsenergylabelercli.
+awsenergylabelercli package.
+
+Import all parts from awsenergylabelercli here
 
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html
-
 """
+
+from .helpers import DataExporter, DestinationPath
 
 __author__ = '''Theodoor Scholte <tscholte@schubergphilis.com>'''
 __docformat__ = '''google'''
 __date__ = '''11-11-2021'''
 __copyright__ = '''Copyright 2021, Theodoor Scholte'''
-__credits__ = ["Theodoor Scholte"]
 __license__ = '''MIT'''
 __maintainer__ = '''Theodoor Scholte'''
 __email__ = '''<tscholte@schubergphilis.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
-
-class InvalidPath(Exception):
-    """The path provided is not valid."""
+assert DataExporter
+assert DestinationPath
