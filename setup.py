@@ -41,12 +41,12 @@ setup(
     license='MIT',
     zip_safe=False,
     keywords='''awsenergylabelercli energy labeler aws security hub''',
-    entry_points = {
-                   'console_scripts': [
-                       # enable this to automatically generate a script in /usr/local/bin called myscript that points to your
-                       #  awsenergylabelercli.awsenergylabelercli:main method
-                       # 'myscript = awsenergylabelercli.awsenergylabelercli:main'
-                   ]},
+    entry_points={
+        'console_scripts': [
+            # enable this to automatically generate a script in /usr/local/bin called myscript that points to your
+            #  awsenergylabelercli.awsenergylabelercli:main method
+            'aws-energy-labeler = awsenergylabelercli.awsenergylabelercli:main'
+        ]},
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
