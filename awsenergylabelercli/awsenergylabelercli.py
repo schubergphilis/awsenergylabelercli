@@ -96,7 +96,7 @@ class DestinationPath:
 
     def is_valid(self):
         """Is the path valid."""
-        return all(self._s3_conditions or self._local_conditions)
+        return all(self._s3_conditions) or all(self._local_conditions)
 
     @property
     def type(self):
@@ -269,7 +269,7 @@ def get_arguments():
                               help='A list of AWS Account IDs that will be excluded from producing the energy label.')
     parser.add_argument('--export',
                         '-e',
-                        type=ValidatePath,
+                        action=ValidatePath,
                         required=False,
                         help='Exports a snapshot of the reporting data in '
                              'JSON formatted files to the specified directory or S3 location.')
@@ -345,7 +345,7 @@ def main():
             exporter = DataExporter(labeler)
             exporter.export(args.export)
         else:
-            print(f'##########  Energy Label for landing zone {args.landing_zone_name} #############')
+            print(f'##########  Energy Label for landing zone {args.landing_zone_name} ##########')
             print(f'Landing Zone: {args.landing_zone_name}')
             print(f'Landing Zone Security Score: {labeler.landing_zone_energy_label}')
             print(f'Labeled Accounts Security Score: {labeler.labeled_accounts_energy_label}')
