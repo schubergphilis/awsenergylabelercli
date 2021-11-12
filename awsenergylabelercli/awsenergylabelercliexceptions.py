@@ -42,5 +42,3 @@ __email__ = '''<tscholte@schubergphilis.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
 
-class InvalidPath(Exception):
-    """The path provided is not valid."""

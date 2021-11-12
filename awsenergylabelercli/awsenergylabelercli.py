@@ -35,13 +35,17 @@ import argparse
 import json
 import logging
 import logging.config
+import os
+import os.path
 import sys
+import tempfile
+from urllib.parse import urljoin, urlparse
 
+import boto3
 import coloredlogs
-
+from botocore.exceptions import NoRegionError, NoCredentialsError, ClientError
 from awsenergylabelerlib import EnergyLabeler
 
-from awsenergylabelercli.helpers import DestinationPath, DataExporter
 
 __author__ = '''Theodoor Scholte <tscholte@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -59,7 +63,13 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
-class ValidatePath(argparse.Action):
+class InvalidPath(Exception):
+    """The path provided is not valid."""
+
+
+class ValidatePath(argparse.Action):  # pylint: disable=too-few-public-methods
+    """Validates a given path."""
+
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
         if nargs is not None:
             raise ValueError("nargs not allowed")
@@ -71,6 +81,134 @@ class ValidatePath(argparse.Action):
             raise argparse.ArgumentTypeError(f'{values} is an invalid export location. '
                                              f'Example --export /a/directory or --export s3://mybucket/ location')
         setattr(namespace, self.dest, values)
+
+
+class DestinationPath:
+    """Models a destination path and identifies if it is valid and it's type."""
+
+    def __init__(self, location):
+        self.location = location
+        self._parsed_url = urlparse(location)
+        self._s3_conditions = [self._parsed_url.scheme == "s3", len(self._parsed_url.path) >= 1]
+        self._local_conditions = [self._parsed_url.scheme == "",
+                                  self._parsed_url.netloc == "",
+                                  len(self._parsed_url.path) >= 1]
+
+    def is_valid(self):
+        """Is the path valid."""
+        return all(self._s3_conditions or self._local_conditions)
+
+    @property
+    def type(self):
+        """The type of the path."""
+        if all(self._s3_conditions):
+            return 's3'
+        if all(self._local_conditions):
+            return 'local'
+        raise InvalidPath(self.location)
+
+
+class DataFileFactory:  # pylint: disable=too-few-public-methods
+    """Data export factory to handle the different data types returned."""
+
+    def __new__(cls, data_type, labeler):
+        if data_type == 'energy_label':
+            obj = EnergyLabelingData('energylabel-of-landingzone.json', labeler)
+        elif data_type == 'findings':
+            obj = SecurityHubFindingsData('securityhub-findings.json', labeler)
+        elif data_type == 'labeled_accounts':
+            obj = LabeledAccountsData('labeled-accounts.json', labeler)
+        else:
+            LOGGER.error('Unknown data type %s', data_type)
+            return None
+        return obj
+
+
+class EnergyLabelingData:  # pylint: disable=too-few-public-methods
+    """Models the data for energy labeling to export."""
+
+    def __init__(self, filename, labeler):
+        self.filename = filename
+        self._labeler = labeler
+
+    @property
+    def json(self):
+        """Data to json."""
+        return json.dumps([{'Landing Zone Name': self._labeler.landing_zone_name,
+                            'Landing Zone Energy Label': self._labeler.energy_label_of_landing_zone}],
+                          indent=2, default=str)
+
+
+class SecurityHubFindingsData:  # pylint: disable=too-few-public-methods
+    """Models the data for energy labeling to export."""
+
+    def __init__(self, filename, labeler):
+        self.filename = filename
+        self._labeler = labeler
+
+    @property
+    def json(self):
+        """Data to json."""
+        return json.dumps(self._labeler.security_hub_findings_data, indent=2, default=str)
+
+
+class LabeledAccountsData:  # pylint: disable=too-few-public-methods
+    """Models the data for energy labeling to export."""
+
+    def __init__(self, filename, labeler):
+        self.filename = filename
+        self._labeler = labeler
+
+    @property
+    def json(self):
+        """Data to json."""
+        return json.dumps([{'Account ID': account.id,
+                            'Account Name': account.name,
+                            'Energy Label': account.energy_label}
+                           for account in self._labeler.labeled_accounts], indent=2, default=str)
+
+
+class DataExporter:  # pylint: disable=too-few-public-methods
+    """Export AWS security data."""
+
+    def __init__(self, energy_labeler):
+        self.energy_labeler = energy_labeler
+        self._logger = logging.getLogger(f'{LOGGER_BASENAME}.{self.__class__.__name__}')
+
+    def export(self, path):
+        """Exports the data to the provided path."""
+        destination = DestinationPath(path)
+        if not destination.is_valid():
+            raise InvalidPath(path)
+        for file_type in ['energy_label', 'findings', 'labeled_accounts']:
+            data_file = DataFileFactory(file_type, self.energy_labeler)
+            if destination.type == 's3':
+                self._export_to_s3(path, data_file.filename, data_file.json)  # pylint: disable=no-member
+            else:
+                self._export_to_fs(path, data_file.filename, data_file.json)  # pylint: disable=no-member
+
+    def _export_to_fs(self, directory, filename, data):
+        """Exports as json to local filesystem."""
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        filepath = os.path.join(directory, filename)
+        with open(filepath, 'w') as jsonfile:
+            jsonfile.write(data)
+        self._logger.debug(f'File {filename} copied to {directory}')
+
+    def _export_to_s3(self, s3_url, filename, data):
+        """Exports as json to S3 object storage."""
+        s3 = boto3.client('s3')  # pylint: disable=invalid-name
+        parsed_url = urlparse(s3_url)
+        bucket_name = parsed_url.netloc
+        dst_path = parsed_url.path
+        with tempfile.NamedTemporaryFile() as temp_file:
+            temp_file.write(data)
+            temp_file.flush()
+            dst_filename = urljoin(dst_path, filename)
+            s3.upload_file(temp_file.name, bucket_name, dst_filename)
+            temp_file.close()
+        self._logger.debug(f'File {filename} copied to {s3_url}')
 
 
 def get_arguments():
@@ -99,34 +237,38 @@ def get_arguments():
                                  'warning',
                                  'error',
                                  'critical'])
-    parser.add_argument('--landingzone-name',
+    parser.add_argument('--landing-zone-name',
                         '-n',
                         type=str,
                         required=True,
                         help='The name of the Landing Zone.')
     parser.add_argument('--region',
+                        '-r',
                         default='eu-west-1',
                         type=str,
                         required=False,
                         help='The AWS region, default is eu-west-1')
     parser.add_argument('--frameworks',
+                        '-f',
                         default='aws-foundational-security-best-practices',
                         nargs='*',
                         help='The list of applicable frameworks: [aws-foundational-security-best-practices, cis], '
                              'default=aws-foundational-security-best-practices')
     account_list = parser.add_mutually_exclusive_group()
     account_list.add_argument('--allow-list',
+                              '-al',
                               nargs='*',
                               default=None,
                               required=False,
                               help='A list of AWS Account IDs for which an energy label will be produced.')
     account_list.add_argument('--deny-list',
+                              '-dl',
                               nargs='*',
                               default=None,
                               required=False,
                               help='A list of AWS Account IDs that will be excluded from producing the energy label.')
     parser.add_argument('--export',
-                        default='',
+                        '-e',
                         type=ValidatePath,
                         required=False,
                         help='Exports a snapshot of the reporting data in '
@@ -179,17 +321,37 @@ def main():
     setup_logging(args.log_level, args.logger_config)
 
     LOGGER.debug(f'{sys.argv[0]} has started with arguments: {args}')
-    labeler = EnergyLabeler(args.landingzone_name,
-                            args.region,
-                            args.frameworks,
-                            allow_list=args.allow_list,
-                            deny_list=args.deny_list)
-    if args.export:
-        exporter = DataExporter(labeler)
-        exporter.export(args.export)
-    print(f'Landing Zone: {args.landingzone_name}')
-    print(f'Landing Zone Security Score: {labeler.landing_zone_energy_label}')
-    print(f'Labeled Accounts Security Score: {labeler.labeled_accounts_energy_label}')
+
+    try:
+        if args.region:
+            os.environ['AWS_DEFAULT_REGION'] = args.region
+        labeler = EnergyLabeler(args.landing_zone_name,
+                                args.region,
+                                args.frameworks,
+                                allow_list=args.allow_list,
+                                deny_list=args.deny_list)
+        _ = labeler.landing_zone_energy_label
+    except NoRegionError:
+        LOGGER.error('Please export a valid region via AWS_DEFAULT_REGION or through the argument.')
+        raise SystemExit(1)
+    except NoCredentialsError:
+        LOGGER.error('Please export valid credentials or configure your aws environment appropriately.')
+        raise SystemExit(1)
+    except Exception as exc:
+        LOGGER.error(exc)
+        raise SystemExit(1)
+    try:
+        if args.export:
+            exporter = DataExporter(labeler)
+            exporter.export(args.export)
+        else:
+            print(f'##########  Energy Label for landing zone {args.landing_zone_name} #############')
+            print(f'Landing Zone: {args.landing_zone_name}')
+            print(f'Landing Zone Security Score: {labeler.landing_zone_energy_label}')
+            print(f'Labeled Accounts Security Score: {labeler.labeled_accounts_energy_label}')
+    except Exception as exc:
+        LOGGER.error(exc)
+        raise SystemExit(1)
     raise SystemExit(0)
 
 
