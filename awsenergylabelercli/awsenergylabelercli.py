@@ -62,6 +62,11 @@ LOGGER_BASENAME = '''awsenergylabelercli'''
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
+EXPORT_TYPES = {
+    'energy_label': 'energy_label',
+    'findings': 'findings',
+    'labeled_accounts': 'labeled_accounts'
+}
 
 class InvalidPath(Exception):
     """The path provided is not valid."""
@@ -111,15 +116,15 @@ class DestinationPath:
 class DataFileFactory:  # pylint: disable=too-few-public-methods
     """Data export factory to handle the different data types returned."""
 
-    def __new__(cls, data_type, labeler):
-        if data_type == 'energy_label':
+    def __new__(cls, export_type, labeler):
+        if export_type == EXPORT_TYPES.get('energy_label'):
             obj = EnergyLabelingData('energylabel-of-landingzone.json', labeler)
-        elif data_type == 'findings':
+        elif export_type == EXPORT_TYPES.get('findings'):
             obj = SecurityHubFindingsData('securityhub-findings.json', labeler)
-        elif data_type == 'labeled_accounts':
+        elif export_type == EXPORT_TYPES.get('labeled_accounts'):
             obj = LabeledAccountsData('labeled-accounts.json', labeler)
         else:
-            LOGGER.error('Unknown data type %s', data_type)
+            LOGGER.error('Unknown data type %s', export_type)
             return None
         return obj
 
@@ -180,8 +185,8 @@ class DataExporter:  # pylint: disable=too-few-public-methods
         destination = DestinationPath(path)
         if not destination.is_valid():
             raise InvalidPath(path)
-        for file_type in ['energy_label', 'findings', 'labeled_accounts']:
-            data_file = DataFileFactory(file_type, self.energy_labeler)
+        for export_type in EXPORT_TYPES.values():
+            data_file = DataFileFactory(export_type, self.energy_labeler)
             if destination.type == 's3':
                 self._export_to_s3(path, data_file.filename, data_file.json)  # pylint: disable=no-member
             else:
