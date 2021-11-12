@@ -150,10 +150,12 @@ class DataExporter:
         destination = DestinationPath(path)
         if not destination.is_valid():
             raise InvalidPath(path)
-        export = self._export_to_s3 if destination.type == 's3' else self._export_to_fs
         for file_type in ['energy_label', 'findings', 'labeled_accounts']:
             data_file = DataFile(file_type, self.energy_labeler)
-            export(path, data_file.filename, data_file.json)
+            if destination.type == 's3':
+                self._export_to_s3(path, data_file.filename, data_file.json)
+            else:
+                self._export_to_fs(path, data_file.filename, data_file.json)
 
     def _export_to_fs(self, directory, filename, data):
         """Exports as json to local filesystem."""
