@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # File: awsenergylabelercli.py
 #
-# Copyright 2021 Theodoor Scholte
+# Copyright 2021 Theodoor Scholte, Costas Tyfoxylos, Jenda Brands
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to
@@ -37,21 +37,26 @@ import logging
 import logging.config
 import os
 import os.path
-import sys
 import tempfile
 from urllib.parse import urljoin, urlparse
 
 import boto3
 import coloredlogs
-from botocore.exceptions import NoRegionError, NoCredentialsError, ClientError
-from awsenergylabelerlib import EnergyLabeler
-
+from terminaltables import AsciiTable
+from art import text2art
+from awsenergylabelerlib import (EnergyLabeler,
+                                 NoRegion,
+                                 NoAccess,
+                                 InvalidOrNoCredentials,
+                                 InvalidAccountListProvided,
+                                 InvalidFrameworks)
+from yaspin import yaspin
 
 __author__ = '''Theodoor Scholte <tscholte@schubergphilis.com>'''
 __docformat__ = '''google'''
 __date__ = '''11-11-2021'''
 __copyright__ = '''Copyright 2021, Theodoor Scholte'''
-__credits__ = ["Theodoor Scholte"]
+__credits__ = ["Theodoor Scholte", "Costas Tyfoxylos", "Jenda Brands"]
 __license__ = '''MIT'''
 __maintainer__ = '''Theodoor Scholte'''
 __email__ = '''<tscholte@schubergphilis.com>'''
@@ -194,7 +199,7 @@ class DataExporter:  # pylint: disable=too-few-public-methods
         filepath = os.path.join(directory, filename)
         with open(filepath, 'w') as jsonfile:
             jsonfile.write(data)
-        self._logger.debug(f'File {filename} copied to {directory}')
+        self._logger.info(f'File {filename} copied to {directory}')
 
     def _export_to_s3(self, s3_url, filename, data):
         """Exports as json to S3 object storage."""
@@ -203,12 +208,12 @@ class DataExporter:  # pylint: disable=too-few-public-methods
         bucket_name = parsed_url.netloc
         dst_path = parsed_url.path
         with tempfile.NamedTemporaryFile() as temp_file:
-            temp_file.write(data)
+            temp_file.write(data.encode('utf-8'))
             temp_file.flush()
             dst_filename = urljoin(dst_path, filename)
             s3.upload_file(temp_file.name, bucket_name, dst_filename)
             temp_file.close()
-        self._logger.debug(f'File {filename} copied to {s3_url}')
+        self._logger.info(f'File {filename} copied to {s3_url}')
 
 
 def get_arguments():
@@ -244,10 +249,10 @@ def get_arguments():
                         help='The name of the Landing Zone.')
     parser.add_argument('--region',
                         '-r',
-                        default='eu-west-1',
+                        default=None,
                         type=str,
                         required=False,
-                        help='The AWS region, default is eu-west-1')
+                        help='The AWS region, default is None')
     parser.add_argument('--frameworks',
                         '-f',
                         default='aws-foundational-security-best-practices',
@@ -319,38 +324,41 @@ def main():
     """
     args = get_arguments()
     setup_logging(args.log_level, args.logger_config)
-
-    LOGGER.debug(f'{sys.argv[0]} has started with arguments: {args}')
-
+    logging.getLogger('botocore').setLevel(logging.ERROR)
     try:
-        if args.region:
-            os.environ['AWS_DEFAULT_REGION'] = args.region
+        print(text2art("AWS Energy Labeler"))
         labeler = EnergyLabeler(args.landing_zone_name,
                                 args.region,
                                 args.frameworks,
                                 allow_list=args.allow_list,
                                 deny_list=args.deny_list)
-        _ = labeler.landing_zone_energy_label
-    except NoRegionError:
-        LOGGER.error('Please export a valid region via AWS_DEFAULT_REGION or through the argument.')
+        if args.log_level == 'debug':
+            _ = labeler.landing_zone_energy_label
+        else:
+            with yaspin(text="Please wait while retrieving findings...", color="yellow") as spinner:
+                _ = labeler.landing_zone_energy_label
+            spinner.ok("✅")
+    except (NoRegion, InvalidOrNoCredentials, NoAccess, InvalidAccountListProvided, InvalidFrameworks) as msg:
+        LOGGER.error(msg)
         raise SystemExit(1)
-    except NoCredentialsError:
-        LOGGER.error('Please export valid credentials or configure your aws environment appropriately.')
-        raise SystemExit(1)
-    except Exception as exc:
-        LOGGER.error(exc)
+    except Exception as msg:
+        LOGGER.error(msg)
         raise SystemExit(1)
     try:
         if args.export:
+            LOGGER.info(f'Trying to export data to the requested path : {args.export}')
             exporter = DataExporter(labeler)
             exporter.export(args.export)
-        else:
-            print(f'##########  Energy Label for landing zone {args.landing_zone_name} ##########')
-            print(f'Landing Zone: {args.landing_zone_name}')
-            print(f'Landing Zone Security Score: {labeler.landing_zone_energy_label}')
-            print(f'Labeled Accounts Security Score: {labeler.labeled_accounts_energy_label}')
-    except Exception as exc:
-        LOGGER.error(exc)
+        table_data = [
+            ['Energy label report', ],
+            ['Landing Zone:', args.landing_zone_name],
+            ['Landing Zone Security Score:', labeler.landing_zone_energy_label],
+            ['Labeled Accounts Security Score:', labeler.labeled_accounts_energy_label]
+        ]
+        table = AsciiTable(table_data)
+        print(table.table)
+    except Exception as msg:
+        LOGGER.error(msg)
         raise SystemExit(1)
     raise SystemExit(0)
 

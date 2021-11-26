@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # File: test_awsenergylabelercli.py
 #
-# Copyright 2021 Theodoor Scholte
+# Copyright 2021 Theodoor Scholte, Costas Tyfoxylos, Jenda Brands
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to
@@ -39,7 +39,7 @@ __author__ = '''Theodoor Scholte <tscholte@schubergphilis.com>'''
 __docformat__ = '''google'''
 __date__ = '''11-11-2021'''
 __copyright__ = '''Copyright 2021, Theodoor Scholte'''
-__credits__ = ["Theodoor Scholte"]
+__credits__ = ["Theodoor Scholte", "Costas Tyfoxylos", "Jenda Brands"]
 __license__ = '''MIT'''
 __maintainer__ = '''Theodoor Scholte'''
 __email__ = '''<tscholte@schubergphilis.com>'''

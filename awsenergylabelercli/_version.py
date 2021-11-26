@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # File: _version.py
 #
-# Copyright 2021 Theodoor Scholte
+# Copyright 2021 Theodoor Scholte, Costas Tyfoxylos, Jenda Brands
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to
