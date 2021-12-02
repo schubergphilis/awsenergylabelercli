@@ -78,7 +78,7 @@ class InvalidPath(Exception):
     """The path provided is not valid."""
 
 
-class ValidatePath(argparse.Action):
+class ValidatePath(argparse.Action):  # pylint: disable=too-few-public-methods
     """Validates a given path."""
 
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
