@@ -78,7 +78,7 @@ class InvalidPath(Exception):
     """The path provided is not valid."""
 
 
-class ValidatePath(argparse.Action):  # pylint: disable=too-few-public-methods
+class ValidatePath(argparse.Action):
     """Validates a given path."""
 
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
@@ -175,6 +175,10 @@ class LabeledAccountsData:  # pylint: disable=too-few-public-methods
         """Data to json."""
         return json.dumps([{'Account ID': account.id,
                             'Account Name': account.name,
+                            'Number of critical and high findings': account.number_of_critical_high_findings,
+                            'Number of medium findings': account.number_of_medium_findings,
+                            'Number of low findings': account.number_of_low_findings,
+                            'Number of maximum days open': account.max_days_open,
                             'Energy Label': account.energy_label}
                            for account in self._labeler.labeled_accounts], indent=2, default=str)
 
@@ -263,7 +267,8 @@ def get_arguments():
                         '-f',
                         default='aws-foundational-security-best-practices',
                         nargs='*',
-                        help='The list of applicable frameworks: [aws-foundational-security-best-practices, cis], '
+                        help='The list of applicable frameworks: \
+                                [aws-foundational-security-best-practices, cis, pci-dss], '
                              'default=aws-foundational-security-best-practices')
     account_list = parser.add_mutually_exclusive_group()
     account_list.add_argument('--allow-list',
