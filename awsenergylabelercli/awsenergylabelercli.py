@@ -365,7 +365,11 @@ def main():
             with yaspin(text="Please wait while retrieving findings...", color="yellow") as spinner:
                 _ = labeler.landing_zone_energy_label
             spinner.ok("✅")
-    except (NoRegion, InvalidOrNoCredentials, NoAccess, InvalidAccountListProvided, InvalidRegionListProvided,
+    except (NoRegion,
+            InvalidOrNoCredentials,
+            NoAccess,
+            InvalidAccountListProvided,
+            InvalidRegionListProvided,
             InvalidFrameworks) as msg:
         LOGGER.error(msg)
         raise SystemExit(1)
