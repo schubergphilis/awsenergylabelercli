@@ -25,3 +25,9 @@ History
 ------------------
 
 * Added allow/deny function for regions
+
+
+0.1.3 (06-12-2021)
+------------------
+
+* Updated library version
