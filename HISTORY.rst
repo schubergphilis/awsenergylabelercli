@@ -19,3 +19,9 @@ History
 ------------------
 
 * Additional details added to export of accounts. Instead of only the energy label, it now includes the number of findings per severity
+
+
+0.1.2 (06-12-2021)
+------------------
+
+* Added allow/deny function for regions
