@@ -49,6 +49,7 @@ from awsenergylabelerlib import (EnergyLabeler,
                                  NoAccess,
                                  InvalidOrNoCredentials,
                                  InvalidAccountListProvided,
+                                 InvalidRegionListProvided,
                                  InvalidFrameworks)
 from yaspin import yaspin
 
@@ -283,6 +284,19 @@ def get_arguments():
                               default=None,
                               required=False,
                               help='A list of AWS Account IDs that will be excluded from producing the energy label.')
+    region_list = parser.add_mutually_exclusive_group()
+    region_list.add_argument('--allowed-regions',
+                             '-ar',
+                             nargs='*',
+                             default=None,
+                             required=False,
+                             help='A list of AWS regions included in producing the energy label.')
+    region_list.add_argument('--denied-regions',
+                             '-dr',
+                             nargs='*',
+                             default=None,
+                             required=False,
+                             help='A list of AWS regions that will be excluded from producing the energy label.')
     parser.add_argument('--export',
                         '-e',
                         action=ValidatePath,
@@ -342,14 +356,21 @@ def main():
                                 args.region,
                                 args.frameworks,
                                 allow_list=args.allow_list,
-                                deny_list=args.deny_list)
+                                deny_list=args.deny_list,
+                                allowed_regions=args.allowed_regions,
+                                denied_regions=args.denied_regions)
         if args.log_level == 'debug':
             _ = labeler.landing_zone_energy_label
         else:
             with yaspin(text="Please wait while retrieving findings...", color="yellow") as spinner:
                 _ = labeler.landing_zone_energy_label
             spinner.ok("✅")
-    except (NoRegion, InvalidOrNoCredentials, NoAccess, InvalidAccountListProvided, InvalidFrameworks) as msg:
+    except (NoRegion,
+            InvalidOrNoCredentials,
+            NoAccess,
+            InvalidAccountListProvided,
+            InvalidRegionListProvided,
+            InvalidFrameworks) as msg:
         LOGGER.error(msg)
         raise SystemExit(1)
     except Exception as msg:
