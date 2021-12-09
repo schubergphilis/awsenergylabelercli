@@ -31,3 +31,9 @@ History
 ------------------
 
 * Updated library version
+
+
+0.1.4 (09-12-2021)
+------------------
+
+* Allow to export to the root of an S3 bucket
