@@ -91,7 +91,7 @@ class ValidatePath(argparse.Action):  # pylint: disable=too-few-public-methods
         destination = DestinationPath(values)
         if not destination.is_valid():
             raise argparse.ArgumentTypeError(f'{values} is an invalid export location. '
-                                             f'Example --export /a/directory or --export s3://mybucket/ location')
+                                             f'Example --export /a/directory or --export s3://mybucket location')
         setattr(namespace, self.dest, values)
 
 
@@ -101,7 +101,7 @@ class DestinationPath:
     def __init__(self, location):
         self.location = location
         self._parsed_url = urlparse(location)
-        self._s3_conditions = [self._parsed_url.scheme == "s3", len(self._parsed_url.path) >= 1]
+        self._s3_conditions = [self._parsed_url.scheme == "s3", len(self._parsed_url.netloc) >= 1]
         self._local_conditions = [self._parsed_url.scheme == "",
                                   self._parsed_url.netloc == "",
                                   len(self._parsed_url.path) >= 1]
@@ -305,7 +305,8 @@ def get_arguments():
                              'JSON formatted files to the specified directory or S3 location.')
     try:
         args = parser.parse_args()
-    except argparse.ArgumentTypeError:
+    except argparse.ArgumentTypeError as error:
+        print(error)
         print('Invalid arguments provided, cannot continue.')
         raise SystemExit(1)
     return args
