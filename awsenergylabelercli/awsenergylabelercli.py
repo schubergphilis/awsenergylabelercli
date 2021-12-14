@@ -68,11 +68,7 @@ LOGGER_BASENAME = '''awsenergylabelercli'''
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
-EXPORT_TYPES = {
-    'energy_label': 'energy_label',
-    'findings': 'findings',
-    'labeled_accounts': 'labeled_accounts'
-}
+ALLOWED_EXPORT_TYPES = ('energy_label', 'findings', 'findings_resources', 'findings_types', 'labeled_accounts')
 
 
 class InvalidPath(Exception):
@@ -124,16 +120,18 @@ class DataFileFactory:  # pylint: disable=too-few-public-methods
     """Data export factory to handle the different data types returned."""
 
     def __new__(cls, export_type, labeler):
-        if export_type == EXPORT_TYPES.get('energy_label'):
-            obj = EnergyLabelingData('energylabel-of-landingzone.json', labeler)
-        elif export_type == EXPORT_TYPES.get('findings'):
-            obj = SecurityHubFindingsData('securityhub-findings.json', labeler)
-        elif export_type == EXPORT_TYPES.get('labeled_accounts'):
-            obj = LabeledAccountsData('labeled-accounts.json', labeler)
-        else:
+        switch = {
+            'energy_label': EnergyLabelingData('energylabel-of-landingzone.json', labeler),
+            'findings': SecurityHubFindingsData('securityhub-findings.json', labeler),
+            'findings_resources': SecurityHubFindingsResourcesData('securityhub-findings-resources.json', labeler),
+            'findings_types': SecurityHubFindingsTypesData('securityhub-findings-types.json', labeler),
+            'labeled_accounts': LabeledAccountsData('labeled-accounts.json', labeler)
+        }
+        try:
+            return switch.get(export_type)
+        except KeyError:
             LOGGER.error('Unknown data type %s', export_type)
             return None
-        return obj
 
 
 class EnergyLabelingData:  # pylint: disable=too-few-public-methods
@@ -161,7 +159,61 @@ class SecurityHubFindingsData:  # pylint: disable=too-few-public-methods
     @property
     def json(self):
         """Data to json."""
-        return json.dumps(self._labeler.security_hub_findings_data, indent=2, default=str)
+        return json.dumps([{'Finding ID': finding.id,
+                            'Account ID': finding.aws_account_id,
+                            'Generator ID': finding.generator_id,
+                            'Finding First Observed At': finding.first_observed_at,
+                            'Finding Last Observed At': finding.last_observed_at,
+                            'Finding Created At': finding.created_at,
+                            'Finding Updated At': finding.updated_at,
+                            'Severity': finding.severity,
+                            'Title': finding.title,
+                            'Description': finding.description,
+                            'Remediation Text': finding.remediation_recommendation_text,
+                            'Remediation Url': finding.remediation_recommendation_url,
+                            'Compliance Framework': finding.compliance_framework,
+                            'Rule ID': finding.rule_id,
+                            'Compliance Status': finding.compliance_status,
+                            'Workflow State': finding.workflow_status,
+                            'Record State': finding.record_state,
+                            'Days Open': finding.days_open
+                            }
+                           for finding in self._labeler.security_hub_findings], indent=2, default=str)
+
+
+class SecurityHubFindingsResourcesData:  # pylint: disable=too-few-public-methods
+    """Models the data for energy labeling to export."""
+
+    def __init__(self, filename, labeler):
+        self.filename = filename
+        self._labeler = labeler
+
+    @property
+    def json(self):
+        """Data to json."""
+        return json.dumps([{'Finding ID': finding.id,
+                            'Resource ID': resource.get('Id'),
+                            'Resource Type': resource.get('Type'),
+                            'Resource Partition': resource.get('Partition'),
+                            'Resource Region': resource.get('Region')}
+                           for finding in self._labeler.security_hub_findings for resource in finding.resources],
+                          indent=2, default=str)
+
+
+class SecurityHubFindingsTypesData:  # pylint: disable=too-few-public-methods
+    """Models the data for energy labeling to export."""
+
+    def __init__(self, filename, labeler):
+        self.filename = filename
+        self._labeler = labeler
+
+    @property
+    def json(self):
+        """Data to json."""
+        return json.dumps([{'Finding ID': finding.id,
+                            'Finding Type': finding_type}
+                           for finding in self._labeler.security_hub_findings for finding_type in finding.types],
+                          indent=2, default=str)
 
 
 class LabeledAccountsData:  # pylint: disable=too-few-public-methods
@@ -196,7 +248,7 @@ class DataExporter:  # pylint: disable=too-few-public-methods
         destination = DestinationPath(path)
         if not destination.is_valid():
             raise InvalidPath(path)
-        for export_type in EXPORT_TYPES.values():
+        for export_type in ALLOWED_EXPORT_TYPES:
             data_file = DataFileFactory(export_type, self.energy_labeler)
             if destination.type == 's3':
                 self._export_to_s3(path, data_file.filename, data_file.json)  # pylint: disable=no-member
