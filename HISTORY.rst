@@ -37,3 +37,9 @@ History
 ------------------
 
 * Allow to export to the root of an S3 bucket
+
+
+0.2.0 (14-12-2021)
+------------------
+
+* Bumped awsenergylabelerlib and added logic for exporting finding resource data and finding type data
