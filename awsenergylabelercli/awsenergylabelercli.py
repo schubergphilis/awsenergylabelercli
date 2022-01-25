@@ -71,11 +71,12 @@ LOGGER.addHandler(logging.NullHandler())
 ALLOWED_EXPORT_TYPES = ('energy_label', 'findings', 'findings_resources', 'findings_types', 'labeled_accounts')
 METRIC_EXPORT_TYPES = ('energy_label', 'labeled_accounts')
 
+
 class InvalidPath(Exception):
     """The path provided is not valid."""
 
 
-class ValidatePath(argparse.Action):  # pylint: disable=too-few-public-methods
+class ValidatePath(argparse.Action):
     """Validates a given path."""
 
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
@@ -448,7 +449,7 @@ def main():
             LOGGER.info(f'Trying to export data to the requested path : {args.export_all}')
             exporter = DataExporter(labeler, ALLOWED_EXPORT_TYPES)
             exporter.export(args.export_all)
-        
+
         if args.export_metrics:
             LOGGER.info(f'Trying to export metrics to the requested path : {args.export_metrics}')
             exporter = DataExporter(labeler, METRIC_EXPORT_TYPES)
