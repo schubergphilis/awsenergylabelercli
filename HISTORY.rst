@@ -43,3 +43,9 @@ History
 ------------------
 
 * Bumped awsenergylabelerlib and added logic for exporting finding resource data and finding type data
+
+
+0.3.0 (31-01-2022)
+------------------
+
+* Introduced single account mode and exporting of metrics only
