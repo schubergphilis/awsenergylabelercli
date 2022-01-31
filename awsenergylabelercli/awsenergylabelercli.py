@@ -69,6 +69,7 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 ALLOWED_EXPORT_TYPES = ('energy_label', 'findings', 'findings_resources', 'findings_types', 'labeled_accounts')
+METRIC_EXPORT_TYPES = ('energy_label', 'labeled_accounts')
 
 
 class InvalidPath(Exception):
@@ -87,7 +88,7 @@ class ValidatePath(argparse.Action):  # pylint: disable=too-few-public-methods
         destination = DestinationPath(values)
         if not destination.is_valid():
             raise argparse.ArgumentTypeError(f'{values} is an invalid export location. '
-                                             f'Example --export /a/directory or --export s3://mybucket location')
+                                             f'Example --export-all /a/directory or --export-all s3://mybucket location')
         setattr(namespace, self.dest, values)
 
 
@@ -239,8 +240,9 @@ class LabeledAccountsData:  # pylint: disable=too-few-public-methods
 class DataExporter:  # pylint: disable=too-few-public-methods
     """Export AWS security data."""
 
-    def __init__(self, energy_labeler):
+    def __init__(self, energy_labeler, export_types):
         self.energy_labeler = energy_labeler
+        self.export_types = export_types
         self._logger = logging.getLogger(f'{LOGGER_BASENAME}.{self.__class__.__name__}')
 
     def export(self, path):
@@ -248,7 +250,7 @@ class DataExporter:  # pylint: disable=too-few-public-methods
         destination = DestinationPath(path)
         if not destination.is_valid():
             raise InvalidPath(path)
-        for export_type in ALLOWED_EXPORT_TYPES:
+        for export_type in self.export_types:
             data_file = DataFileFactory(export_type, self.energy_labeler)
             if destination.type == 's3':
                 self._export_to_s3(path, data_file.filename, data_file.json)  # pylint: disable=no-member
@@ -349,12 +351,24 @@ def get_arguments():
                              default=None,
                              required=False,
                              help='A list of AWS regions that will be excluded from producing the energy label.')
-    parser.add_argument('--export',
+    parser.add_argument('--export-all',
                         '-e',
                         action=ValidatePath,
                         required=False,
-                        help='Exports a snapshot of the reporting data in '
+                        help='Exports a snapshot of all reporting data in '
                              'JSON formatted files to the specified directory or S3 location.')
+    parser.add_argument('--export-metrics',
+                        '-m',
+                        action=ValidatePath,
+                        required=False,
+                        help='Exports metrics/statistics without sensitive findings data in '
+                             'JSON formatted files to the specified directory or S3 location.')
+    parser.add_argument('--single-account',
+                        '-s',
+                        default=False,
+                        required=False,
+                        action='store_true',
+                        help='Run the labeler on a single account')
     try:
         args = parser.parse_args()
     except argparse.ArgumentTypeError as error:
@@ -411,7 +425,8 @@ def main():
                                 allow_list=args.allow_list,
                                 deny_list=args.deny_list,
                                 allowed_regions=args.allowed_regions,
-                                denied_regions=args.denied_regions)
+                                denied_regions=args.denied_regions,
+                                single_account=args.single_account)
         if args.log_level == 'debug':
             _ = labeler.landing_zone_energy_label
         else:
@@ -430,10 +445,16 @@ def main():
         LOGGER.error(msg)
         raise SystemExit(1)
     try:
-        if args.export:
-            LOGGER.info(f'Trying to export data to the requested path : {args.export}')
-            exporter = DataExporter(labeler)
-            exporter.export(args.export)
+        if args.export_all:
+            LOGGER.info(f'Trying to export data to the requested path : {args.export_all}')
+            exporter = DataExporter(labeler, ALLOWED_EXPORT_TYPES)
+            exporter.export(args.export_all)
+
+        if args.export_metrics:
+            LOGGER.info(f'Trying to export metrics to the requested path : {args.export_metrics}')
+            exporter = DataExporter(labeler, METRIC_EXPORT_TYPES)
+            LOGGER.info(f'Starting export with {args.export_metrics}')
+            exporter.export(args.export_metrics)
         table_data = [
             ['Energy label report', ],
             ['Landing Zone:', args.landing_zone_name],
@@ -445,7 +466,6 @@ def main():
     except Exception as msg:
         LOGGER.error(msg)
         raise SystemExit(1)
-    raise SystemExit(0)
 
 
 if __name__ == '__main__':
