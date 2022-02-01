@@ -49,3 +49,9 @@ History
 ------------------
 
 * Introduced single account mode and exporting of metrics only
+
+
+0.3.1 (01-02-2022)
+------------------
+
+* Bumped library version to filter FAILED findings only
