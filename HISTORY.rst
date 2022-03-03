@@ -55,3 +55,10 @@ History
 ------------------
 
 * Bumped library version to filter FAILED findings only
+
+
+0.4.0 (03-03-2022)
+------------------
+
+* Updated help documentation
+* Uses newest library version to not count suppressed findings to the label
