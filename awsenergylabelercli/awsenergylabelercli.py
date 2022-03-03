@@ -320,11 +320,11 @@ def get_arguments():
                         help='The AWS region, default is None')
     parser.add_argument('--frameworks',
                         '-f',
-                        default='aws-foundational-security-best-practices',
+                        default=["aws-foundational-security-best-practices"],
                         nargs='*',
                         help='The list of applicable frameworks: \
-                                [aws-foundational-security-best-practices, cis, pci-dss], '
-                             'default=aws-foundational-security-best-practices')
+                                ["aws-foundational-security-best-practices", "cis", "pci-dss"], '
+                             'default=["aws-foundational-security-best-practices"]')
     account_list = parser.add_mutually_exclusive_group()
     account_list.add_argument('--allow-list',
                               '-al',
