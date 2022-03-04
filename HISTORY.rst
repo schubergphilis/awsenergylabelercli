@@ -68,3 +68,9 @@ History
 ------------------
 
 * Bumped lib version.
+
+
+0.4.2 (04-03-2022)
+------------------
+
+* Bumped lib to get unique findings only.
