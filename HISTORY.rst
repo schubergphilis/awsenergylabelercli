@@ -62,3 +62,9 @@ History
 
 * Updated help documentation
 * Uses newest library version to not count suppressed findings to the label
+
+
+0.4.1 (04-03-2022)
+------------------
+
+* Bumped lib version.
