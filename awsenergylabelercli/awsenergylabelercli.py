@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # File: awsenergylabelercli.py
 #
-# Copyright 2021 Theodoor Scholte, Costas Tyfoxylos, Jenda Brands
+# Copyright 2022 Theodoor Scholte, Costas Tyfoxylos, Jenda Brands
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to
@@ -35,250 +35,37 @@ import argparse
 import json
 import logging
 import logging.config
-import os
-import os.path
-import tempfile
-from urllib.parse import urljoin, urlparse
 
-import boto3
 import coloredlogs
-from terminaltables import AsciiTable
-from art import text2art
 from awsenergylabelerlib import (EnergyLabeler,
-                                 NoRegion,
-                                 NoAccess,
-                                 InvalidOrNoCredentials,
-                                 InvalidAccountListProvided,
-                                 InvalidRegionListProvided,
-                                 InvalidFrameworks)
+                                 AwsAccount,
+                                 SecurityHub,
+                                 ACCOUNT_THRESHOLDS,
+                                 LANDING_ZONE_THRESHOLDS,
+                                 DEFAULT_SECURITY_HUB_FILTER,
+                                 DEFAULT_SECURITY_HUB_FRAMEWORKS,
+                                 ALL_LANDING_ZONE_EXPORT_TYPES,
+                                 LANDING_ZONE_METRIC_EXPORT_TYPES,
+                                 ALL_ACCOUNT_EXPORT_TYPES,
+                                 ACCOUNT_METRIC_EXPORT_TYPES)
 from yaspin import yaspin
 
-__author__ = '''Theodoor Scholte <tscholte@schubergphilis.com>'''
+from .validators import aws_account_id, ValidatePath, security_hub_region
+
+__author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
 __date__ = '''11-11-2021'''
-__copyright__ = '''Copyright 2021, Theodoor Scholte'''
+__copyright__ = '''Copyright 2022, Costas Tyfoxylos'''
 __credits__ = ["Theodoor Scholte", "Costas Tyfoxylos", "Jenda Brands"]
 __license__ = '''MIT'''
-__maintainer__ = '''Theodoor Scholte'''
-__email__ = '''<tscholte@schubergphilis.com>'''
+__maintainer__ = '''Costas Tyfoxylos'''
+__email__ = '''<ctyfoxylos@schubergphilis.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
 # This is the main prefix used for logging
 LOGGER_BASENAME = '''awsenergylabelercli'''
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
-
-ALLOWED_EXPORT_TYPES = ('energy_label', 'findings', 'findings_resources', 'findings_types', 'labeled_accounts')
-METRIC_EXPORT_TYPES = ('energy_label', 'labeled_accounts')
-
-
-class InvalidPath(Exception):
-    """The path provided is not valid."""
-
-
-class ValidatePath(argparse.Action):  # pylint: disable=too-few-public-methods
-    """Validates a given path."""
-
-    def __init__(self, option_strings, dest, nargs=None, **kwargs):
-        if nargs is not None:
-            raise ValueError("nargs not allowed")
-        super(ValidatePath, self).__init__(option_strings, dest, **kwargs)
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        destination = DestinationPath(values)
-        if not destination.is_valid():
-            raise argparse.ArgumentTypeError(f'{values} is an invalid export location. '
-                                             f'Example --export-all /a/directory or --export-all s3://mybucket location')
-        setattr(namespace, self.dest, values)
-
-
-class DestinationPath:
-    """Models a destination path and identifies if it is valid and it's type."""
-
-    def __init__(self, location):
-        self.location = location
-        self._parsed_url = urlparse(location)
-        self._s3_conditions = [self._parsed_url.scheme == "s3", len(self._parsed_url.netloc) >= 1]
-        self._local_conditions = [self._parsed_url.scheme == "",
-                                  self._parsed_url.netloc == "",
-                                  len(self._parsed_url.path) >= 1]
-
-    def is_valid(self):
-        """Is the path valid."""
-        return all(self._s3_conditions) or all(self._local_conditions)
-
-    @property
-    def type(self):
-        """The type of the path."""
-        if all(self._s3_conditions):
-            return 's3'
-        if all(self._local_conditions):
-            return 'local'
-        raise InvalidPath(self.location)
-
-
-class DataFileFactory:  # pylint: disable=too-few-public-methods
-    """Data export factory to handle the different data types returned."""
-
-    def __new__(cls, export_type, labeler):
-        switch = {
-            'energy_label': EnergyLabelingData('energylabel-of-landingzone.json', labeler),
-            'findings': SecurityHubFindingsData('securityhub-findings.json', labeler),
-            'findings_resources': SecurityHubFindingsResourcesData('securityhub-findings-resources.json', labeler),
-            'findings_types': SecurityHubFindingsTypesData('securityhub-findings-types.json', labeler),
-            'labeled_accounts': LabeledAccountsData('labeled-accounts.json', labeler)
-        }
-        try:
-            return switch.get(export_type)
-        except KeyError:
-            LOGGER.error('Unknown data type %s', export_type)
-            return None
-
-
-class EnergyLabelingData:  # pylint: disable=too-few-public-methods
-    """Models the data for energy labeling to export."""
-
-    def __init__(self, filename, labeler):
-        self.filename = filename
-        self._labeler = labeler
-
-    @property
-    def json(self):
-        """Data to json."""
-        return json.dumps([{'Landing Zone Name': self._labeler.landing_zone_name,
-                            'Landing Zone Energy Label': self._labeler.landing_zone_energy_label}],
-                          indent=2, default=str)
-
-
-class SecurityHubFindingsData:  # pylint: disable=too-few-public-methods
-    """Models the data for energy labeling to export."""
-
-    def __init__(self, filename, labeler):
-        self.filename = filename
-        self._labeler = labeler
-
-    @property
-    def json(self):
-        """Data to json."""
-        return json.dumps([{'Finding ID': finding.id,
-                            'Account ID': finding.aws_account_id,
-                            'Generator ID': finding.generator_id,
-                            'Finding First Observed At': finding.first_observed_at,
-                            'Finding Last Observed At': finding.last_observed_at,
-                            'Finding Created At': finding.created_at,
-                            'Finding Updated At': finding.updated_at,
-                            'Severity': finding.severity,
-                            'Title': finding.title,
-                            'Description': finding.description,
-                            'Remediation Text': finding.remediation_recommendation_text,
-                            'Remediation Url': finding.remediation_recommendation_url,
-                            'Compliance Framework': finding.compliance_framework,
-                            'Rule ID': finding.rule_id,
-                            'Compliance Status': finding.compliance_status,
-                            'Workflow State': finding.workflow_status,
-                            'Record State': finding.record_state,
-                            'Days Open': finding.days_open
-                            }
-                           for finding in self._labeler.security_hub_findings], indent=2, default=str)
-
-
-class SecurityHubFindingsResourcesData:  # pylint: disable=too-few-public-methods
-    """Models the data for energy labeling to export."""
-
-    def __init__(self, filename, labeler):
-        self.filename = filename
-        self._labeler = labeler
-
-    @property
-    def json(self):
-        """Data to json."""
-        return json.dumps([{'Finding ID': finding.id,
-                            'Resource ID': resource.get('Id'),
-                            'Resource Type': resource.get('Type'),
-                            'Resource Partition': resource.get('Partition'),
-                            'Resource Region': resource.get('Region')}
-                           for finding in self._labeler.security_hub_findings for resource in finding.resources],
-                          indent=2, default=str)
-
-
-class SecurityHubFindingsTypesData:  # pylint: disable=too-few-public-methods
-    """Models the data for energy labeling to export."""
-
-    def __init__(self, filename, labeler):
-        self.filename = filename
-        self._labeler = labeler
-
-    @property
-    def json(self):
-        """Data to json."""
-        return json.dumps([{'Finding ID': finding.id,
-                            'Finding Type': finding_type}
-                           for finding in self._labeler.security_hub_findings for finding_type in finding.types],
-                          indent=2, default=str)
-
-
-class LabeledAccountsData:  # pylint: disable=too-few-public-methods
-    """Models the data for energy labeling to export."""
-
-    def __init__(self, filename, labeler):
-        self.filename = filename
-        self._labeler = labeler
-
-    @property
-    def json(self):
-        """Data to json."""
-        return json.dumps([{'Account ID': account.id,
-                            'Account Name': account.name,
-                            'Number of critical and high findings': account.number_of_critical_high_findings,
-                            'Number of medium findings': account.number_of_medium_findings,
-                            'Number of low findings': account.number_of_low_findings,
-                            'Number of maximum days open': account.max_days_open,
-                            'Energy Label': account.energy_label}
-                           for account in self._labeler.labeled_accounts], indent=2, default=str)
-
-
-class DataExporter:  # pylint: disable=too-few-public-methods
-    """Export AWS security data."""
-
-    def __init__(self, energy_labeler, export_types):
-        self.energy_labeler = energy_labeler
-        self.export_types = export_types
-        self._logger = logging.getLogger(f'{LOGGER_BASENAME}.{self.__class__.__name__}')
-
-    def export(self, path):
-        """Exports the data to the provided path."""
-        destination = DestinationPath(path)
-        if not destination.is_valid():
-            raise InvalidPath(path)
-        for export_type in self.export_types:
-            data_file = DataFileFactory(export_type, self.energy_labeler)
-            if destination.type == 's3':
-                self._export_to_s3(path, data_file.filename, data_file.json)  # pylint: disable=no-member
-            else:
-                self._export_to_fs(path, data_file.filename, data_file.json)  # pylint: disable=no-member
-
-    def _export_to_fs(self, directory, filename, data):
-        """Exports as json to local filesystem."""
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        filepath = os.path.join(directory, filename)
-        with open(filepath, 'w') as jsonfile:
-            jsonfile.write(data)
-        self._logger.info(f'File {filename} copied to {directory}')
-
-    def _export_to_s3(self, s3_url, filename, data):
-        """Exports as json to S3 object storage."""
-        s3 = boto3.client('s3')  # pylint: disable=invalid-name
-        parsed_url = urlparse(s3_url)
-        bucket_name = parsed_url.netloc
-        dst_path = parsed_url.path
-        with tempfile.NamedTemporaryFile() as temp_file:
-            temp_file.write(data.encode('utf-8'))
-            temp_file.flush()
-            dst_filename = urljoin(dst_path, filename)
-            s3.upload_file(temp_file.name, bucket_name, dst_filename)
-            temp_file.close()
-        self._logger.info(f'File {filename} copied to {s3_url}')
 
 
 def get_arguments():
@@ -307,17 +94,26 @@ def get_arguments():
                                  'warning',
                                  'error',
                                  'critical'])
-    parser.add_argument('--landing-zone-name',
-                        '-n',
-                        type=str,
-                        required=True,
-                        help='The name of the Landing Zone.')
+    scope = parser.add_mutually_exclusive_group(required=True)
+    scope.add_argument('--landing-zone-name',
+                       '-n',
+                       type=str,
+                       help='The name of the Landing Zone to label. '
+                            'Mutually exclusive with --single-account-id argument.')
+    single_account_action = scope.add_argument('--single-account-id',
+                                               '-s',
+                                               required=False,
+                                               dest='single_account_id',
+                                               action='store',
+                                               type=aws_account_id,
+                                               help='Run the labeler on a single account. '
+                                                    'Mutually exclusive with --landing-zone-name argument.')
     parser.add_argument('--region',
                         '-r',
                         default=None,
-                        type=str,
+                        type=security_hub_region,
                         required=False,
-                        help='The AWS region, default is None')
+                        help='The home AWS region, default is None')
     parser.add_argument('--frameworks',
                         '-f',
                         default=["aws-foundational-security-best-practices"],
@@ -326,63 +122,64 @@ def get_arguments():
                                 ["aws-foundational-security-best-practices", "cis", "pci-dss"], '
                              'default=["aws-foundational-security-best-practices"]')
     account_list = parser.add_mutually_exclusive_group()
-    account_list.add_argument('--allow-list',
-                              '-al',
+    account_list._group_actions.append(single_account_action)  # pylint: disable=protected-access
+    account_list.add_argument('--allowed-account-ids',
+                              '-a',
                               nargs='*',
                               default=None,
                               required=False,
-                              help='A list of AWS Account IDs for which an energy label will be produced.')
-    account_list.add_argument('--deny-list',
-                              '-dl',
+                              help='A list of AWS Account IDs for which an energy label will be produced. '
+                                   'Mutually exclusive with --denied-account-ids and --single-account-id arguments.')
+    account_list.add_argument('--denied-account-ids',
+                              '-d',
                               nargs='*',
                               default=None,
                               required=False,
-                              help='A list of AWS Account IDs that will be excluded from producing the energy label.')
+                              help='A list of AWS Account IDs that will be excluded from producing the energy label. '
+                                   'Mutually exclusive with --allowed-account-ids and --single-account-id arguments.')
     region_list = parser.add_mutually_exclusive_group()
     region_list.add_argument('--allowed-regions',
                              '-ar',
                              nargs='*',
                              default=None,
                              required=False,
-                             help='A list of AWS regions included in producing the energy label.')
+                             help='A list of AWS regions included in producing the energy label.'
+                                  'Mutually exclusive with --denied-regions argument.')
     region_list.add_argument('--denied-regions',
                              '-dr',
                              nargs='*',
                              default=None,
                              required=False,
-                             help='A list of AWS regions that will be excluded from producing the energy label.')
-    parser.add_argument('--export-all',
-                        '-e',
+                             help='A list of AWS regions excluded from producing the energy label.'
+                                  'Mutually exclusive with --allowed-regions argument.')
+    parser.add_argument('--export-path',
+                        '-p',
                         action=ValidatePath,
                         required=False,
-                        help='Exports a snapshot of all reporting data in '
+                        help='Exports a snapshot of chosen data in '
                              'JSON formatted files to the specified directory or S3 location.')
-    parser.add_argument('--export-metrics',
-                        '-m',
-                        action=ValidatePath,
-                        required=False,
-                        help='Exports metrics/statistics without sensitive findings data in '
-                             'JSON formatted files to the specified directory or S3 location.')
-    parser.add_argument('--single-account',
-                        '-s',
-                        default=False,
-                        required=False,
-                        action='store_true',
-                        help='Run the labeler on a single account')
-    try:
-        args = parser.parse_args()
-    except argparse.ArgumentTypeError as error:
-        print(error)
-        print('Invalid arguments provided, cannot continue.')
-        raise SystemExit(1)
+    export_options = parser.add_mutually_exclusive_group()
+    export_options.add_argument('--export-metrics',
+                                '-em',
+                                action='store_const',
+                                dest='export_all',
+                                const=False,
+                                help='Exports metrics/statistics along with findings data in '
+                                     'JSON formatted files to the specified directory or S3 location.')
+    export_options.add_argument('--export-all',
+                                '-ea',
+                                action='store_const',
+                                dest='export_all',
+                                const=True,
+                                help='Exports metrics/statistics without sensitive findings data in '
+                                     'JSON formatted files to the specified directory or S3 location.')
+    parser.set_defaults(export_all=True)
+    args = parser.parse_args()
     return args
 
 
 def setup_logging(level, config_file=None):
-    """
-    Sets up the logging.
-
-    Needs the args to get the log level supplied
+    """Sets up the logging.
 
     Args:
         level: At which level do we log
@@ -392,81 +189,136 @@ def setup_logging(level, config_file=None):
     # This will configure the logging, if the user has set a config file.
     # If there's no config file, logging will default to stdout.
     if config_file:
-        # Get the config for the logger. Of course this needs exception
-        # catching in case the file is not there and everything. Proper IO
-        # handling is not shown here.
         try:
             with open(config_file) as conf_file:
                 configuration = json.loads(conf_file.read())
-                # Configure the logger
                 logging.config.dictConfig(configuration)
         except ValueError:
             print(f'File "{config_file}" is not valid json, cannot continue.')
+            raise SystemExit(1)
+        except FileNotFoundError:
+            print(f'File "{config_file}" does not exist or cannot be read, cannot continue.')
             raise SystemExit(1)
     else:
         coloredlogs.install(level=level.upper())
 
 
-def main():
-    """
-    Main method.
+def wait_for_findings(method_name, method_argument, log_level):
+    """If log level is not debug shows a spinner while the callable provided gets security hub findings.
 
-    This method holds what you want to execute when
-    the script is run on command line.
+    Args:
+        method_name: The method to execute while waiting.
+        method_argument: The argument to pass to the method.
+        log_level: The log level as set by the user.
+
+    Returns:
+        findings: A list of security hub findings as retrieved by the callable.
+
     """
-    args = get_arguments()
-    setup_logging(args.log_level, args.logger_config)
-    logging.getLogger('botocore').setLevel(logging.ERROR)
     try:
-        print(text2art("AWS Energy Labeler"))
-        labeler = EnergyLabeler(args.landing_zone_name,
-                                args.region,
-                                args.frameworks,
-                                allow_list=args.allow_list,
-                                deny_list=args.deny_list,
-                                allowed_regions=args.allowed_regions,
-                                denied_regions=args.denied_regions,
-                                single_account=args.single_account)
-        if args.log_level == 'debug':
-            _ = labeler.landing_zone_energy_label
-        else:
+        if not log_level == 'debug':
             with yaspin(text="Please wait while retrieving findings...", color="yellow") as spinner:
-                _ = labeler.landing_zone_energy_label
-            spinner.ok("✅")
-    except (NoRegion,
-            InvalidOrNoCredentials,
-            NoAccess,
-            InvalidAccountListProvided,
-            InvalidRegionListProvided,
-            InvalidFrameworks) as msg:
-        LOGGER.error(msg)
-        raise SystemExit(1)
+                findings = method_name(method_argument)
+        else:
+            findings = method_name(method_argument)
+        spinner.ok("✅")
     except Exception as msg:
         LOGGER.error(msg)
         raise SystemExit(1)
-    try:
-        if args.export_all:
-            LOGGER.info(f'Trying to export data to the requested path : {args.export_all}')
-            exporter = DataExporter(labeler, ALLOWED_EXPORT_TYPES)
-            exporter.export(args.export_all)
-
-        if args.export_metrics:
-            LOGGER.info(f'Trying to export metrics to the requested path : {args.export_metrics}')
-            exporter = DataExporter(labeler, METRIC_EXPORT_TYPES)
-            LOGGER.info(f'Starting export with {args.export_metrics}')
-            exporter.export(args.export_metrics)
-        table_data = [
-            ['Energy label report', ],
-            ['Landing Zone:', args.landing_zone_name],
-            ['Landing Zone Security Score:', labeler.landing_zone_energy_label],
-            ['Labeled Accounts Security Score:', labeler.labeled_accounts_energy_label]
-        ]
-        table = AsciiTable(table_data)
-        print(table.table)
-    except Exception as msg:
-        LOGGER.error(msg)
-        raise SystemExit(1)
+    return findings
 
 
-if __name__ == '__main__':
-    main()
+#  pylint: disable=too-many-arguments
+def get_landing_zone_reporting_data(landing_zone_name,
+                                    region,
+                                    allowed_account_ids,
+                                    denied_account_ids,
+                                    allowed_regions,
+                                    denied_regions,
+                                    export_all_data_flag,
+                                    log_level):
+    """Gets the reporting data for a landing zone.
+
+    Args:
+        landing_zone_name: The name of the landing zone.
+        region: The home region of AWS.
+        allowed_account_ids: The allowed account ids for landing zone inclusion if any.
+        denied_account_ids: The allowed account ids for landing zone exclusion if any.
+        allowed_regions: The allowed regions for security hub if any.
+        denied_regions: The denied regions for security hub if any.
+        export_all_data_flag: If set all data is going to be exported, else only basic reporting.
+        log_level: The log level set.
+
+    Returns:
+        report_data, exporter_arguments
+
+    """
+    labeler = EnergyLabeler(landing_zone_name=landing_zone_name,
+                            region=region,
+                            account_thresholds=ACCOUNT_THRESHOLDS,
+                            landing_zone_thresholds=LANDING_ZONE_THRESHOLDS,
+                            security_hub_filter=DEFAULT_SECURITY_HUB_FILTER,
+                            frameworks=DEFAULT_SECURITY_HUB_FRAMEWORKS,
+                            allowed_account_ids=allowed_account_ids,
+                            denied_account_ids=denied_account_ids,
+                            allowed_regions=allowed_regions,
+                            denied_regions=denied_regions)
+    wait_for_findings(EnergyLabeler.security_hub_findings.fget, labeler, log_level)
+    report_data = [['Landing Zone:', labeler.landing_zone.name],
+                   ['Landing Zone Security Score:', labeler.landing_zone_energy_label.label],
+                   ['Landing Zone Percentage Coverage:', labeler.landing_zone_energy_label.coverage],
+                   ['Labeled Accounts Security Score:', labeler.labeled_accounts_energy_label.label],
+                   ['Labeled Accounts Measured:', labeler.labeled_accounts_energy_label.accounts_measured]]
+    export_types = ALL_LANDING_ZONE_EXPORT_TYPES if export_all_data_flag else LANDING_ZONE_METRIC_EXPORT_TYPES
+    exporter_arguments = {'export_types': export_types,
+                          'name': labeler.landing_zone.name,
+                          'energy_label': labeler.landing_zone_energy_label.label,
+                          'security_hub_findings': labeler.security_hub_findings,
+                          'labeled_accounts': labeler.landing_zone_labeled_accounts}
+    return report_data, exporter_arguments
+
+
+#  pylint: disable=too-many-arguments
+def get_account_reporting_data(account_id,
+                               region,
+                               allowed_regions,
+                               denied_regions,
+                               export_all_data_flag,
+                               log_level):
+    """Gets the reporting data for a single account.
+
+    Args:
+        account_id: The ID of the account to get reporting on.
+        region: The home region of AWS.
+        allowed_regions: The allowed regions for security hub if any.
+        denied_regions: The denied regions for security hub if any.
+        export_all_data_flag: If set all data is going to be exported, else only basic reporting.
+        log_level: The log level set.
+
+    Returns:
+        report_data, exporter_arguments
+
+    """
+    account = AwsAccount(account_id, 'Not Retrieved', ACCOUNT_THRESHOLDS)
+    security_hub = SecurityHub(region=region,
+                               allowed_regions=allowed_regions,
+                               denied_regions=denied_regions)
+    query_filter = SecurityHub.calculate_query_filter(DEFAULT_SECURITY_HUB_FILTER,
+                                                      allowed_account_ids=[account_id],
+                                                      denied_account_ids=None,
+                                                      frameworks=DEFAULT_SECURITY_HUB_FRAMEWORKS)
+    security_hub_findings = wait_for_findings(security_hub.get_findings, query_filter, log_level)
+    account.calculate_energy_label(security_hub_findings)
+    report_data = [['Account ID:', account.id],
+                   ['Account Security Score:', account.energy_label.label],
+                   ['Number Of Critical & High Findings:', account.energy_label.number_of_critical_high_findings],
+                   ['Number Of Medium Findings:', account.energy_label.number_of_medium_findings],
+                   ['Number Of Low Findings:', account.energy_label.number_of_low_findings],
+                   ['Max Days Open:', account.energy_label.max_days_open]]
+    export_types = ALL_ACCOUNT_EXPORT_TYPES if export_all_data_flag else ACCOUNT_METRIC_EXPORT_TYPES
+    exporter_arguments = {'export_types': export_types,
+                          'name': account.id,
+                          'energy_label': account.energy_label.label,
+                          'security_hub_findings': security_hub_findings,
+                          'labeled_accounts': account}
+    return report_data, exporter_arguments
