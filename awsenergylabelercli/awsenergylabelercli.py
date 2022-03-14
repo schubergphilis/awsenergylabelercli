@@ -269,8 +269,8 @@ def get_landing_zone_reporting_data(landing_zone_name,
                    ['Landing Zone Percentage Coverage:', labeler.landing_zone_energy_label.coverage],
                    ['Labeled Accounts Measured:', labeler.labeled_accounts_energy_label.accounts_measured]]
     if not labeler.landing_zone_energy_label.best_label == labeler.landing_zone_energy_label.worst_label:
-        report_data.append(['Best Account Security Score:', labeler.landing_zone_energy_label.best_label],
-                           ['Worst Account Security Score:', labeler.landing_zone_energy_label.worst_label])
+        report_data.extend([['Best Account Security Score:', labeler.landing_zone_energy_label.best_label],
+                            ['Worst Account Security Score:', labeler.landing_zone_energy_label.worst_label]])
     export_types = ALL_LANDING_ZONE_EXPORT_TYPES if export_all_data_flag else LANDING_ZONE_METRIC_EXPORT_TYPES
     exporter_arguments = {'export_types': export_types,
                           'name': labeler.landing_zone.name,
