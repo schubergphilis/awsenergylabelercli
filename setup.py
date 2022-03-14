@@ -45,8 +45,9 @@ setup(
         'console_scripts': [
             # enable this to automatically generate a script in /usr/local/bin called myscript that points to your
             #  awsenergylabelercli.awsenergylabelercli:main method
-            'aws-energy-labeler = cli:main'
+            'aws-energy-labeler = aws_energy_labeler_cli:main'
         ]},
+    scripts=['aws_energy_labeler_cli'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
