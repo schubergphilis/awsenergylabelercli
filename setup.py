@@ -47,7 +47,7 @@ setup(
             #  awsenergylabelercli.awsenergylabelercli:main method
             'aws-energy-labeler = aws_energy_labeler_cli:main'
         ]},
-    scripts=['aws_energy_labeler_cli'],
+    scripts=['aws_energy_labeler_cli.py'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
