@@ -8,8 +8,8 @@
 # Please use Pipfile to update the requirements.
 #
 coloredlogs~=10.0
-awsenergylabelerlib~=0.4.1
+awsenergylabelerlib~=1.0.1
 boto3~=1.19.12
 yaspin~=2.1.0
 terminaltables~=3.1.10
-art~=5.3
+art~=5.5
