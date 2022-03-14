@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# File: cli.py
+# File: aws_energy_labeler_cli.py
 #
 # Copyright 2022 Theodoor Scholte, Costas Tyfoxylos, Jenda Brands
 #
@@ -24,7 +24,7 @@
 #
 
 """
-Main code for cli.
+Main code for aws_energy_labeler_cli.
 
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html
@@ -53,7 +53,7 @@ __email__ = '''<ctyfoxylos@schubergphilis.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
 # This is the main prefix used for logging
-LOGGER_BASENAME = '''cli'''
+LOGGER_BASENAME = '''aws_energy_labeler_cli'''
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
