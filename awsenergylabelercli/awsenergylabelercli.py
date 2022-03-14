@@ -219,9 +219,9 @@ def wait_for_findings(method_name, method_argument, log_level):
         if not log_level == 'debug':
             with yaspin(text="Please wait while retrieving Security Hub findings...", color="yellow") as spinner:
                 findings = method_name(method_argument)
+            spinner.ok("✅")
         else:
             findings = method_name(method_argument)
-        spinner.ok("✅")
     except Exception as msg:
         LOGGER.error(msg)
         raise SystemExit(1)
@@ -267,9 +267,10 @@ def get_landing_zone_reporting_data(landing_zone_name,
     report_data = [['Landing Zone:', labeler.landing_zone.name],
                    ['Landing Zone Security Score:', labeler.landing_zone_energy_label.label],
                    ['Landing Zone Percentage Coverage:', labeler.landing_zone_energy_label.coverage],
-                   ['Labeled Accounts Measured:', labeler.labeled_accounts_energy_label.accounts_measured],
-                   ['Best Account Security Score:', labeler.landing_zone_energy_label.best_label],
-                   ['Worst Account Security Score:', labeler.landing_zone_energy_label.worst_label]]
+                   ['Labeled Accounts Measured:', labeler.labeled_accounts_energy_label.accounts_measured]]
+    if not labeler.landing_zone_energy_label.best_label == labeler.landing_zone_energy_label.worst_label:
+        report_data.append(['Best Account Security Score:', labeler.landing_zone_energy_label.best_label],
+                           ['Worst Account Security Score:', labeler.landing_zone_energy_label.worst_label])
     export_types = ALL_LANDING_ZONE_EXPORT_TYPES if export_all_data_flag else LANDING_ZONE_METRIC_EXPORT_TYPES
     exporter_arguments = {'export_types': export_types,
                           'name': labeler.landing_zone.name,
