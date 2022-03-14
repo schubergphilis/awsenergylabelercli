@@ -58,28 +58,32 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
-def main():
-    """Main method."""
-    args = get_arguments()
-    setup_logging(args.log_level, args.logger_config)
-    logging.getLogger('botocore').setLevel(logging.ERROR)
+def _get_reporting_arguments(args):
     method_arguments = {'region': args.region,
                         'allowed_regions': args.allowed_regions,
                         'denied_regions': args.denied_regions,
                         'export_all_data_flag': args.export_all,
                         'log_level': args.log_level}
+    if args.landing_zone_name:
+        get_reporting_data = get_landing_zone_reporting_data
+        method_arguments.update({'landing_zone_name': args.landing_zone_name,
+                                 'allowed_account_ids': args.allowed_account_ids,
+                                 'denied_account_ids': args.denied_account_ids})
+
+    else:
+        get_reporting_data = get_account_reporting_data
+        method_arguments.update({'account_id': args.single_account_id})
+    return get_reporting_data(**method_arguments)
+
+
+def main():
+    """Main method."""
+    args = get_arguments()
+    setup_logging(args.log_level, args.logger_config)
+    logging.getLogger('botocore').setLevel(logging.ERROR)
     try:
         print(text2art("AWS Energy Labeler"))
-        if args.landing_zone_name:
-            get_reporting_data = get_landing_zone_reporting_data
-            method_arguments.update({'landing_zone_name': args.landing_zone_name,
-                                     'allowed_account_ids': args.allowed_account_ids,
-                                     'denied_account_ids': args.denied_account_ids})
-
-        else:
-            get_reporting_data = get_account_reporting_data
-            method_arguments.update({'account_id': args.single_account_id})
-        report_data, exporter_arguments = get_reporting_data(**method_arguments)
+        report_data, exporter_arguments = _get_reporting_arguments(args)
         if args.export_path:
             LOGGER.info(f'Trying to export data to the requested path : {args.export_path}')
             exporter = DataExporter(**exporter_arguments)
