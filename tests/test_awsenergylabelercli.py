@@ -33,7 +33,7 @@ Tests for `awsenergylabelercli` module.
 
 """
 
-from betamax.fixtures import unittest
+import unittest
 
 __author__ = '''Theodoor Scholte <tscholte@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -46,7 +46,7 @@ __email__ = '''<tscholte@schubergphilis.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
 
-class TestAwsenergylabelercli(unittest.BetamaxTestCase):
+class TestAwsenergylabelercli(unittest.TestCase):
 
     def setUp(self):
         """
