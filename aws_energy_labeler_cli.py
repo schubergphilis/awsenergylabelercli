@@ -32,6 +32,7 @@ Main code for aws_energy_labeler_cli.
 """
 
 import logging
+import json
 
 from art import text2art
 from awsenergylabelerlib import DataExporter
@@ -76,6 +77,18 @@ def _get_reporting_arguments(args):
     return get_reporting_data(**method_arguments)
 
 
+def report(report_data, to_json=False):
+    if to_json:
+        data = {key.replace(':', '').replace(' ', '_').lower(): value for key, value in dict(report_data).items()}
+        print(json.dumps(data, indent=2))
+        return None
+    table_data = [['Energy label report']]
+    table_data.extend(report_data)
+    table = AsciiTable(table_data)
+    print(table.table)
+    return None
+
+
 def main():
     """Main method."""
     args = get_arguments()
@@ -88,10 +101,7 @@ def main():
             LOGGER.info(f'Trying to export data to the requested path : {args.export_path}')
             exporter = DataExporter(**exporter_arguments)
             exporter.export(args.export_path)
-        table_data = [['Energy label report']]
-        table_data.extend(report_data)
-        table = AsciiTable(table_data)
-        print(table.table)
+        report(report_data, args.to_json)
     except Exception as msg:
         LOGGER.error(msg)
         raise SystemExit(1)

@@ -173,6 +173,13 @@ def get_arguments():
                                 const=True,
                                 help='Exports metrics/statistics without sensitive findings data in '
                                      'JSON formatted files to the specified directory or S3 location.')
+    parser.add_argument('--to-json',
+                        '-j',
+                        dest='to_json',
+                        action='store_true',
+                        required=False,
+                        default=False,
+                        help='Return the report in json format.')
     parser.set_defaults(export_all=True)
     args = parser.parse_args()
     return args
