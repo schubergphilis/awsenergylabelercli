@@ -78,6 +78,7 @@ def _get_reporting_arguments(args):
 
 
 def report(report_data, to_json=False):
+    """Report to table or json."""
     if to_json:
         data = {key.replace(':', '').replace(' ', '_').lower(): value for key, value in dict(report_data).items()}
         print(json.dumps(data, indent=2))
