@@ -5,6 +5,7 @@ include HISTORY.rst
 include LICENSE
 include README.rst
 include USAGE.rst
+include aws_energy_labeler_cli.py
 include Pipfile
 include Pipfile.lock
 include requirements.txt

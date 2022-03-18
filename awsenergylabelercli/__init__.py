@@ -32,6 +32,10 @@ Import all parts from awsenergylabelercli here
    http://google.github.io/styleguide/pyguide.html
 """
 from ._version import __version__
+from .awsenergylabelercli import (get_arguments,
+                                  setup_logging,
+                                  get_landing_zone_reporting_data,
+                                  get_account_reporting_data)
 
 __author__ = '''Theodoor Scholte <tscholte@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -44,3 +48,8 @@ __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
 # This is to 'use' the module(s), so lint doesn't complain
 assert __version__
+
+assert get_arguments
+assert setup_logging
+assert get_landing_zone_reporting_data
+assert get_account_reporting_data
