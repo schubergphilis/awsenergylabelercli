@@ -74,3 +74,9 @@ History
 ------------------
 
 * Bumped lib to get unique findings only.
+
+
+0.4.3 (16-05-2022)
+------------------
+
+* Matching underlying library refactoring.
