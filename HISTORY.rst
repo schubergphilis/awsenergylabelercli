@@ -80,3 +80,9 @@ History
 ------------------
 
 * Matching underlying library refactoring.
+
+
+1.0.0 (16-05-2022)
+------------------
+
+* Matching underlying library refactoring.
