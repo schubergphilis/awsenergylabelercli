@@ -325,7 +325,7 @@ def get_account_reporting_data(account_id,
                    ['Number Of Low Findings:', account.energy_label.number_of_low_findings],
                    ['Max Days Open:', account.energy_label.max_days_open]]
     if account.alias:
-        report_data.insert(['Account Alias:', account.alias])
+        report_data.append(['Account Alias:', account.alias])
     export_types = ALL_ACCOUNT_EXPORT_TYPES if export_all_data_flag else ACCOUNT_METRIC_EXPORT_TYPES
     exporter_arguments = {'export_types': export_types,
                           'name': account.id,
