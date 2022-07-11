@@ -59,3 +59,26 @@ jobs:
           PYPI_UPLOAD_USERNAME: ${{ secrets.PYPI_UPLOAD_USERNAME }}
           PYPI_UPLOAD_PASSWORD: ${{ secrets.PYPI_UPLOAD_PASSWORD }}
 
+  container_release:
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+      needs: build
+      runs-on: ubuntu-latest
+      environment:
+        name: release
+      steps:
+        - name: Checkout sources
+          uses: actions/checkout@v2
+
+        - name: Setup gcloud
+          uses: google-github-actions/auth@v0
+          with:
+            credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+            
+        - name: Configure docker for GCP
+          run: gcloud auth configure-docker
+
+        - name: Build docker image
+          run:  docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/awsenergylabelercli:latest .
+
+        - name: Push to Google Container Registry
+          run:  docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/awsenergylabelercli:latest
