@@ -86,3 +86,9 @@ History
 ------------------
 
 * Matching underlying library refactoring.
+
+
+1.0.1 (11-07-2022)
+------------------
+
+* Fixed list.append
