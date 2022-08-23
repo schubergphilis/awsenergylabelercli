@@ -164,14 +164,14 @@ def get_arguments():
                                 action='store_const',
                                 dest='export_all',
                                 const=False,
-                                help='Exports metrics/statistics along with findings data in '
+                                help='Exports metrics/statistics without sensitive findings data in '
                                      'JSON formatted files to the specified directory or S3 location.')
     export_options.add_argument('--export-all',
                                 '-ea',
                                 action='store_const',
                                 dest='export_all',
                                 const=True,
-                                help='Exports metrics/statistics without sensitive findings data in '
+                                help='Exports metrics/statistics along with findings data in '
                                      'JSON formatted files to the specified directory or S3 location.')
     parser.add_argument('--to-json',
                         '-j',
