@@ -500,7 +500,7 @@ def bump(segment=None, version_file=None):
     try:
         with open(version_file) as version:
             version_text = version.read().strip()
-        _ = semver.parse(version_text)
+        current_version = semver.Version.parse(version_text)
     except FileNotFoundError:
         LOGGER.error('Could not find .VERSION file')
         raise SystemExit(1)
