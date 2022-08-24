@@ -31,17 +31,21 @@ Main code for aws_energy_labeler_cli.
 
 """
 
-import logging
 import json
+import logging
 
+import typer
 from art import text2art
 from awsenergylabelerlib import DataExporter
 from terminaltables import AsciiTable
 
-from awsenergylabelercli import (get_arguments,
-                                 setup_logging,
+from awsenergylabelercli import (get_account_reporting_data,
                                  get_landing_zone_reporting_data,
-                                 get_account_reporting_data)
+                                 setup_logging)
+from awsenergylabelercli.awsenergylabelercliexceptions import \
+    MissingRequiredArgument
+from awsenergylabelercli.validators import (get_mutually_exclusive,
+                                            validate_path)
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -59,24 +63,6 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
-def _get_reporting_arguments(args):
-    method_arguments = {'region': args.region,
-                        'allowed_regions': args.allowed_regions,
-                        'denied_regions': args.denied_regions,
-                        'export_all_data_flag': args.export_all,
-                        'log_level': args.log_level}
-    if args.landing_zone_name:
-        get_reporting_data = get_landing_zone_reporting_data
-        method_arguments.update({'landing_zone_name': args.landing_zone_name,
-                                 'allowed_account_ids': args.allowed_account_ids,
-                                 'denied_account_ids': args.denied_account_ids})
-
-    else:
-        get_reporting_data = get_account_reporting_data
-        method_arguments.update({'account_id': args.single_account_id})
-    return get_reporting_data(**method_arguments)
-
-
 def report(report_data, to_json=False):
     """Report to table or json."""
     if to_json:
@@ -90,19 +76,128 @@ def report(report_data, to_json=False):
     return None
 
 
-def main():
+#  pylint: disable=too-many-arguments,too-many-locals
+def main(logger_config=typer.Option('',
+                                    '--log-config',
+                                    '-l',
+                                    envvar='LOG_CONFIG',
+                                    help='The location of the logging config json file'),
+         log_level=typer.Option('info',
+                                '--log-level',
+                                '-L',
+                                envvar='LOG_LEVEL',
+                                help='Provide the log level. Defaults to info.'),
+         landing_zone_name: str = typer.Option(None,
+                                               '--landing-zone-name',
+                                               '-n',
+                                               envvar='LANDING_ZONE_NAME',
+                                               help='The name of the Landing Zone to label. '
+                                                    'Mutually exclusive with --single-account-id argument.'),
+         single_account_id=typer.Option(None,
+                                        '--single-account-id',
+                                        '-s',
+                                        envvar='SINGLE_ACCOUNT_ID',
+                                        help='Run the labeler on a single account. '
+                                             'Mutually exclusive with --landing-zone-name argument.'),
+         region=typer.Option(None,
+                             '--region',
+                             '-r',
+                             envvar='REGION',
+                             help='The home AWS region, default is None'),
+         frameworks=typer.Option(None,
+                                 '--frameworks',
+                                 '-f',
+                                 help='The list of applicable frameworks: \
+                                      ["aws-foundational-security-best-practices", "cis", "pci-dss"], '
+                                      'default=["aws-foundational-security-best-practices"]'),
+         allowed_account_ids=typer.Option(None,
+                                          '--allowed-account-ids',
+                                          '-a',
+                                          envvar='ALLOWED_ACCOUNT_IDS',
+                                          help='A list of AWS Account IDs for which an energy label will be produced. '
+                                               'Mutually exclusive with --denied-account-ids and \
+                                                --single-account-id arguments.'),
+         denied_account_ids=typer.Option(None,
+                                         '--denied-account-ids',
+                                         '-a',
+                                         envvar='ALLOWED_ACCOUNT_IDS',
+                                         help='A list of AWS Account IDs for which an energy label will be produced. '
+                                              'Mutually exclusive with --denied-account-ids and \
+                                               --single-account-id arguments.'),
+         allowed_regions=typer.Option(None,
+                                      '--allowed-regions',
+                                      '-ar',
+                                      envvar='ALLOWED_ACCOUNT_IDS',
+                                      help='A list of AWS regions included in producing the energy label.'
+                                           'Mutually exclusive with --denied-regions argument.'),
+         denied_regions=typer.Option(None,
+                                     '--denied-regions',
+                                     '-dr',
+                                     envvar='ALLOWED_ACCOUNT_IDS',
+                                     help='A list of AWS regions excluded from producing the energy label.'
+                                     'Mutually exclusive with --allowed-regions argument.'),
+         export_path=typer.Option(None,
+                                  '--export-path',
+                                  '-p',
+                                  envvar='EXPORT_PATH',
+                                  help='Path to export a snapshot of metrics data (by default) in '
+                                       'JSON formatted files to the specified directory or S3 location.'
+                                       'When [-ea|--export-all] is set, all findings data is exported \
+                                        to this location'),
+         export_all: bool = typer.Option(None,
+                                         '--export-all',
+                                         '-ea',
+                                         envvar='EXPORT_ALL',
+                                         help='Exports all findings data (including sensitive data) in '
+                                              'JSON formatted files to the specified directory or S3 location.'
+                                              'As set with [-p|--export-path]'),
+         to_json: bool = typer.Option(None,
+                                      '--to-json',
+                                      '-j',
+                                      envvar='TO_JSON',
+                                      help='Prints metrics/statistics is JSON format instead of table')):
     """Main method."""
-    args = get_arguments()
-    setup_logging(args.log_level, args.logger_config)
+    landing_zone_name, single_account_id = get_mutually_exclusive({'landing_zone_name': landing_zone_name,
+                                                                   'single_account_id': single_account_id},
+                                                                  required=True)
+    allowed_account_ids, denied_account_ids = get_mutually_exclusive({'allowed_account_ids': allowed_account_ids,
+                                                                      'denied_account_ids': denied_account_ids})
+    allowed_regions, denied_regions = get_mutually_exclusive({'allowed_regions': allowed_regions,
+                                                              'denied_regions': denied_regions})
+
+    if export_all and not export_path:
+        raise MissingRequiredArgument('export_path is required when export_all is set')
+
+    if export_path:
+        validate_path(export_path)
+
+    setup_logging(log_level, logger_config)
     logging.getLogger('botocore').setLevel(logging.ERROR)
+
     try:
         print(text2art("AWS Energy Labeler"))
-        report_data, exporter_arguments = _get_reporting_arguments(args)
-        if args.export_path:
-            LOGGER.info(f'Trying to export data to the requested path : {args.export_path}')
+        method_arguments = {'region': region,
+                            'allowed_regions': allowed_regions,
+                            'denied_regions': denied_regions,
+                            'export_all_data_flag': export_all,
+                            'log_level': log_level,
+                            'frameworks': frameworks}
+        if landing_zone_name:
+            get_reporting_data = get_landing_zone_reporting_data
+            method_arguments.update({'landing_zone_name': landing_zone_name,
+                                     'allowed_account_ids': allowed_account_ids,
+                                     'denied_account_ids': denied_account_ids})
+        else:
+            get_reporting_data = get_account_reporting_data
+            method_arguments.update({'account_id': single_account_id})
+
+        report_data, exporter_arguments = get_reporting_data(**method_arguments)
+
+        if export_path:
+            LOGGER.info(f'Trying to export data to the requested path : {export_path}')
             exporter = DataExporter(**exporter_arguments)
-            exporter.export(args.export_path)
-        report(report_data, args.to_json)
+            exporter.export(export_path)
+        report(report_data, to_json)
     except Exception as msg:
         LOGGER.error(msg)
         raise SystemExit(1)
@@ -110,4 +205,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    typer.run(main)

@@ -31,10 +31,10 @@ Main code for awsenergylabelercli.
 
 """
 
-import argparse
 import json
 import logging
 import logging.config
+
 
 import coloredlogs
 from awsenergylabelerlib import (EnergyLabeler,
@@ -50,7 +50,6 @@ from awsenergylabelerlib import (EnergyLabeler,
                                  ACCOUNT_METRIC_EXPORT_TYPES)
 from yaspin import yaspin
 
-from .validators import aws_account_id, ValidatePath, security_hub_region
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -66,123 +65,6 @@ __status__ = '''Development'''  # "Prototype", "Development", "Production".
 LOGGER_BASENAME = '''awsenergylabelercli'''
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
-
-
-def get_arguments():
-    """
-    Gets us the cli arguments.
-
-    Returns the args as parsed from the argsparser.
-    """
-    # https://docs.python.org/3/library/argparse.html
-    parser = argparse.ArgumentParser(description='''A cli to label accounts and landing zones with energy labels based
-    on Security Hub finding.''')
-    parser.add_argument('--log-config',
-                        '-l',
-                        action='store',
-                        dest='logger_config',
-                        help='The location of the logging config json file',
-                        default='')
-    parser.add_argument('--log-level',
-                        '-L',
-                        help='Provide the log level. Defaults to info.',
-                        dest='log_level',
-                        action='store',
-                        default='info',
-                        choices=['debug',
-                                 'info',
-                                 'warning',
-                                 'error',
-                                 'critical'])
-    scope = parser.add_mutually_exclusive_group(required=True)
-    scope.add_argument('--landing-zone-name',
-                       '-n',
-                       type=str,
-                       help='The name of the Landing Zone to label. '
-                            'Mutually exclusive with --single-account-id argument.')
-    single_account_action = scope.add_argument('--single-account-id',
-                                               '-s',
-                                               required=False,
-                                               dest='single_account_id',
-                                               action='store',
-                                               type=aws_account_id,
-                                               help='Run the labeler on a single account. '
-                                                    'Mutually exclusive with --landing-zone-name argument.')
-    parser.add_argument('--region',
-                        '-r',
-                        default=None,
-                        type=security_hub_region,
-                        required=False,
-                        help='The home AWS region, default is None')
-    parser.add_argument('--frameworks',
-                        '-f',
-                        default=["aws-foundational-security-best-practices"],
-                        nargs='*',
-                        help='The list of applicable frameworks: \
-                                ["aws-foundational-security-best-practices", "cis", "pci-dss"], '
-                             'default=["aws-foundational-security-best-practices"]')
-    account_list = parser.add_mutually_exclusive_group()
-    account_list._group_actions.append(single_account_action)  # pylint: disable=protected-access
-    account_list.add_argument('--allowed-account-ids',
-                              '-a',
-                              nargs='*',
-                              default=None,
-                              required=False,
-                              help='A list of AWS Account IDs for which an energy label will be produced. '
-                                   'Mutually exclusive with --denied-account-ids and --single-account-id arguments.')
-    account_list.add_argument('--denied-account-ids',
-                              '-d',
-                              nargs='*',
-                              default=None,
-                              required=False,
-                              help='A list of AWS Account IDs that will be excluded from producing the energy label. '
-                                   'Mutually exclusive with --allowed-account-ids and --single-account-id arguments.')
-    region_list = parser.add_mutually_exclusive_group()
-    region_list.add_argument('--allowed-regions',
-                             '-ar',
-                             nargs='*',
-                             default=None,
-                             required=False,
-                             help='A list of AWS regions included in producing the energy label.'
-                                  'Mutually exclusive with --denied-regions argument.')
-    region_list.add_argument('--denied-regions',
-                             '-dr',
-                             nargs='*',
-                             default=None,
-                             required=False,
-                             help='A list of AWS regions excluded from producing the energy label.'
-                                  'Mutually exclusive with --allowed-regions argument.')
-    parser.add_argument('--export-path',
-                        '-p',
-                        action=ValidatePath,
-                        required=False,
-                        help='Exports a snapshot of chosen data in '
-                             'JSON formatted files to the specified directory or S3 location.')
-    export_options = parser.add_mutually_exclusive_group()
-    export_options.add_argument('--export-metrics',
-                                '-em',
-                                action='store_const',
-                                dest='export_all',
-                                const=False,
-                                help='Exports metrics/statistics along with findings data in '
-                                     'JSON formatted files to the specified directory or S3 location.')
-    export_options.add_argument('--export-all',
-                                '-ea',
-                                action='store_const',
-                                dest='export_all',
-                                const=True,
-                                help='Exports metrics/statistics without sensitive findings data in '
-                                     'JSON formatted files to the specified directory or S3 location.')
-    parser.add_argument('--to-json',
-                        '-j',
-                        dest='to_json',
-                        action='store_true',
-                        required=False,
-                        default=False,
-                        help='Return the report in json format.')
-    parser.set_defaults(export_all=True)
-    args = parser.parse_args()
-    return args
 
 
 def setup_logging(level, config_file=None):
@@ -243,7 +125,8 @@ def get_landing_zone_reporting_data(landing_zone_name,
                                     allowed_regions,
                                     denied_regions,
                                     export_all_data_flag,
-                                    log_level):
+                                    log_level,
+                                    frameworks):
     """Gets the reporting data for a landing zone.
 
     Args:
@@ -255,6 +138,7 @@ def get_landing_zone_reporting_data(landing_zone_name,
         denied_regions: The denied regions for security hub if any.
         export_all_data_flag: If set all data is going to be exported, else only basic reporting.
         log_level: The log level set.
+        frameworks: The frameworks to report on.
 
     Returns:
         report_data, exporter_arguments
@@ -265,7 +149,7 @@ def get_landing_zone_reporting_data(landing_zone_name,
                             account_thresholds=ACCOUNT_THRESHOLDS,
                             landing_zone_thresholds=LANDING_ZONE_THRESHOLDS,
                             security_hub_filter=DEFAULT_SECURITY_HUB_FILTER,
-                            frameworks=DEFAULT_SECURITY_HUB_FRAMEWORKS,
+                            frameworks=frameworks if frameworks else DEFAULT_SECURITY_HUB_FRAMEWORKS,
                             allowed_account_ids=allowed_account_ids,
                             denied_account_ids=denied_account_ids,
                             allowed_regions=allowed_regions,
@@ -293,7 +177,8 @@ def get_account_reporting_data(account_id,
                                allowed_regions,
                                denied_regions,
                                export_all_data_flag,
-                               log_level):
+                               log_level,
+                               frameworks):
     """Gets the reporting data for a single account.
 
     Args:
@@ -303,6 +188,7 @@ def get_account_reporting_data(account_id,
         denied_regions: The denied regions for security hub if any.
         export_all_data_flag: If set all data is going to be exported, else only basic reporting.
         log_level: The log level set.
+        frameworks: The frameworks to report on.
 
     Returns:
         report_data, exporter_arguments
@@ -315,7 +201,8 @@ def get_account_reporting_data(account_id,
     query_filter = SecurityHub.calculate_query_filter(DEFAULT_SECURITY_HUB_FILTER,
                                                       allowed_account_ids=[account_id],
                                                       denied_account_ids=None,
-                                                      frameworks=DEFAULT_SECURITY_HUB_FRAMEWORKS)
+                                                      frameworks=frameworks if frameworks
+                                                      else DEFAULT_SECURITY_HUB_FRAMEWORKS)
     security_hub_findings = wait_for_findings(security_hub.get_findings, query_filter, log_level)
     account.calculate_energy_label(security_hub_findings)
     report_data = [['Account ID:', account.id],

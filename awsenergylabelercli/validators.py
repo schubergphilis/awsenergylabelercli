@@ -31,16 +31,18 @@ Main code for validators.
 
 """
 
-import argparse
 import logging
-
-from argparse import ArgumentTypeError
 
 from awsenergylabelerlib import (is_valid_account_id,
                                  is_valid_region,
                                  DestinationPath,
                                  SECURITY_HUB_ACTIVE_REGIONS)
 
+from .awsenergylabelercliexceptions import (MissingRequiredArgument,
+                                            InvalidAccountId,
+                                            InvalidPath,
+                                            MutuallyExclusiveArguments,
+                                            InvalidRegion)
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -58,33 +60,37 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
-class ValidatePath(argparse.Action):  # pylint: disable=too-few-public-methods
+def validate_path(input_path):
     """Validates a given path."""
-
-    def __init__(self, option_strings, dest, nargs=None, **kwargs):
-        if nargs is not None:
-            raise ValueError("nargs not allowed")
-        super(ValidatePath, self).__init__(option_strings, dest, **kwargs)
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        destination = DestinationPath(values)
-        if not destination.is_valid():
-            raise argparse.ArgumentTypeError(f'{values} is an invalid export location. '
-                                             f'Example --export-path /a/directory or '
-                                             f'--export-path s3://mybucket location')
-        setattr(namespace, self.dest, values)
+    destination = DestinationPath(input_path)
+    if not destination.is_valid():
+        raise InvalidPath(f'{input_path} is an invalid export location. '
+                          f'Example --export-path /a/directory or '
+                          f'--export-path s3://mybucket location')
 
 
 def aws_account_id(account_id):
     """Setting a type for an account id argument."""
     if not is_valid_account_id(account_id):
-        raise ArgumentTypeError(f'Account id {account_id} provided does not seem to be valid.')
+        raise InvalidAccountId(f'Account id {account_id} provided does not seem to be valid.')
     return account_id
 
 
 def security_hub_region(region):
     """Setting a type for an security hub region."""
     if not is_valid_region(region):
-        raise ArgumentTypeError(f'Region {region} provided does not seem to be valid, valid regions are '
-                                f'{SECURITY_HUB_ACTIVE_REGIONS}.')
+        raise InvalidRegion(f'Region {region} provided does not seem to be valid, valid regions are '
+                            f'{SECURITY_HUB_ACTIVE_REGIONS}.')
     return region
+
+
+def get_mutually_exclusive(variables: dict, required: bool = False):
+    """Test if multiple mutually exclusive arguments are provided."""
+    bool_list = []
+    for var in variables:
+        bool_list.append(bool(variables[var]))
+    if bool_list.count(True) > 1:
+        raise MutuallyExclusiveArguments(variables)
+    if bool_list.count(True) == 0 and required:
+        raise MissingRequiredArgument(variables)
+    return [variables[x] for x in variables]

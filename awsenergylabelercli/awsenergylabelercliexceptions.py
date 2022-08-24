@@ -40,3 +40,23 @@ __license__ = '''MIT'''
 __maintainer__ = '''Theodoor Scholte'''
 __email__ = '''<tscholte@schubergphilis.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
+
+
+class MutuallyExclusiveArguments(Exception):
+    """Mutually exclusive variables are set."""
+
+
+class MissingRequiredArgument(Exception):
+    """Required argument is not set."""
+
+
+class InvalidPath(Exception):
+    """Invalid path provided."""
+
+
+class InvalidAccountId(Exception):
+    """Invalid account ID provided."""
+
+
+class InvalidRegion(Exception):
+    """Invalid region provided."""
