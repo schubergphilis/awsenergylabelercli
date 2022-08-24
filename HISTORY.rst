@@ -92,3 +92,9 @@ History
 ------------------
 
 * Fixed list.append
+
+
+1.0.2 (24-08-2022)
+------------------
+
+* Fix the export of resources on findings data
