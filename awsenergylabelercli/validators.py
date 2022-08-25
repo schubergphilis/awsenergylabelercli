@@ -35,8 +35,10 @@ import argparse
 import logging
 from argparse import ArgumentTypeError
 
-from awsenergylabelerlib import (SECURITY_HUB_ACTIVE_REGIONS, DestinationPath,
-                                 is_valid_account_id, is_valid_region)
+from awsenergylabelerlib import (is_valid_account_id,
+                                 is_valid_region,
+                                 DestinationPath,
+                                 SECURITY_HUB_ACTIVE_REGIONS)
 
 from .awsenergylabelercliexceptions import MutuallyExclusiveArguments
 
