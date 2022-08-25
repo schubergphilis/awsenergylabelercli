@@ -33,14 +33,12 @@ Main code for validators.
 
 import argparse
 import logging
-
 from argparse import ArgumentTypeError
 
-from awsenergylabelerlib import (is_valid_account_id,
-                                 is_valid_region,
-                                 DestinationPath,
-                                 SECURITY_HUB_ACTIVE_REGIONS)
+from awsenergylabelerlib import (SECURITY_HUB_ACTIVE_REGIONS, DestinationPath,
+                                 is_valid_account_id, is_valid_region)
 
+from .awsenergylabelercliexceptions import MutuallyExclusiveArguments
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -88,3 +86,10 @@ def security_hub_region(region):
         raise ArgumentTypeError(f'Region {region} provided does not seem to be valid, valid regions are '
                                 f'{SECURITY_HUB_ACTIVE_REGIONS}.')
     return region
+
+
+def get_mutually_exclusive_args(arg1, arg2):
+    """Test if multiple mutually exclusive arguments are provided."""
+    if arg1 and arg2:
+        raise MutuallyExclusiveArguments(arg1, arg2)
+    return arg1, arg2
