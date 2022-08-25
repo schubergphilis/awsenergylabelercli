@@ -51,8 +51,10 @@ from awsenergylabelerlib import (EnergyLabeler,
                                  ACCOUNT_METRIC_EXPORT_TYPES)
 from yaspin import yaspin
 
-from .validators import (ValidatePath, aws_account_id,
-                         get_mutually_exclusive_args, security_hub_region)
+from .validators import (ValidatePath,
+                         aws_account_id,
+                         get_mutually_exclusive_args,
+                         security_hub_region)
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
