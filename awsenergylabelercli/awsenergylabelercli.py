@@ -123,7 +123,8 @@ def get_arguments():
                         help='The home AWS region, default is None')
     parser.add_argument('--frameworks',
                         '-f',
-                        default=os.environ.get('FRAMEWORKS', ["aws-foundational-security-best-practices"]),
+                        default=os.environ.get('FRAMEWORKS', DEFAULT_SECURITY_HUB_FRAMEWORKS),
+                        type=list,
                         nargs='*',
                         help='The list of applicable frameworks: \
                                 ["aws-foundational-security-best-practices", "cis", "pci-dss"], '
@@ -134,6 +135,7 @@ def get_arguments():
                               '-a',
                               nargs='*',
                               default=os.environ.get('ALLOWED_ACCOUNT_IDS'),
+                              type=list,
                               required=False,
                               help='A list of AWS Account IDs for which an energy label will be produced. '
                                    'Mutually exclusive with --denied-account-ids and --single-account-id arguments.')
@@ -141,6 +143,7 @@ def get_arguments():
                               '-d',
                               nargs='*',
                               default=os.environ.get('DENIED_ACCOUNT_IDS'),
+                              type=list,
                               required=False,
                               help='A list of AWS Account IDs that will be excluded from producing the energy label. '
                                    'Mutually exclusive with --allowed-account-ids and --single-account-id arguments.')
@@ -149,6 +152,7 @@ def get_arguments():
                              '-ar',
                              nargs='*',
                              default=os.environ.get('ALLOWED_REGIONS'),
+                             type=list,
                              required=False,
                              help='A list of AWS regions included in producing the energy label.'
                                   'Mutually exclusive with --denied-regions argument.')
@@ -156,6 +160,7 @@ def get_arguments():
                              '-dr',
                              nargs='*',
                              default=os.environ.get('DENIED_REGIONS'),
+                             type=list,
                              required=False,
                              help='A list of AWS regions excluded from producing the energy label.'
                                   'Mutually exclusive with --allowed-regions argument.')
@@ -254,6 +259,7 @@ def wait_for_findings(method_name, method_argument, log_level):
 #  pylint: disable=too-many-arguments
 def get_landing_zone_reporting_data(landing_zone_name,
                                     region,
+                                    frameworks,
                                     allowed_account_ids,
                                     denied_account_ids,
                                     allowed_regions,
@@ -265,6 +271,7 @@ def get_landing_zone_reporting_data(landing_zone_name,
     Args:
         landing_zone_name: The name of the landing zone.
         region: The home region of AWS.
+        frameworks: The frameworks to include in scoring.
         allowed_account_ids: The allowed account ids for landing zone inclusion if any.
         denied_account_ids: The allowed account ids for landing zone exclusion if any.
         allowed_regions: The allowed regions for security hub if any.
@@ -281,7 +288,7 @@ def get_landing_zone_reporting_data(landing_zone_name,
                             account_thresholds=ACCOUNT_THRESHOLDS,
                             landing_zone_thresholds=LANDING_ZONE_THRESHOLDS,
                             security_hub_filter=DEFAULT_SECURITY_HUB_FILTER,
-                            frameworks=DEFAULT_SECURITY_HUB_FRAMEWORKS,
+                            frameworks=frameworks,
                             allowed_account_ids=allowed_account_ids,
                             denied_account_ids=denied_account_ids,
                             allowed_regions=allowed_regions,
@@ -306,6 +313,7 @@ def get_landing_zone_reporting_data(landing_zone_name,
 #  pylint: disable=too-many-arguments
 def get_account_reporting_data(account_id,
                                region,
+                               frameworks,
                                allowed_regions,
                                denied_regions,
                                export_all_data_flag,
@@ -315,6 +323,7 @@ def get_account_reporting_data(account_id,
     Args:
         account_id: The ID of the account to get reporting on.
         region: The home region of AWS.
+        frameworks: The frameworks to include in scoring.
         allowed_regions: The allowed regions for security hub if any.
         denied_regions: The denied regions for security hub if any.
         export_all_data_flag: If set all data is going to be exported, else only basic reporting.
@@ -331,7 +340,7 @@ def get_account_reporting_data(account_id,
     query_filter = SecurityHub.calculate_query_filter(DEFAULT_SECURITY_HUB_FILTER,
                                                       allowed_account_ids=[account_id],
                                                       denied_account_ids=None,
-                                                      frameworks=DEFAULT_SECURITY_HUB_FRAMEWORKS)
+                                                      frameworks=frameworks)
     security_hub_findings = wait_for_findings(security_hub.get_findings, query_filter, log_level)
     account.calculate_energy_label(security_hub_findings)
     report_data = [['Account ID:', account.id],
