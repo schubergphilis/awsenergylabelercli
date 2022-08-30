@@ -49,6 +49,9 @@ from awsenergylabelerlib import (EnergyLabeler,
                                  LANDING_ZONE_METRIC_EXPORT_TYPES,
                                  ALL_ACCOUNT_EXPORT_TYPES,
                                  ACCOUNT_METRIC_EXPORT_TYPES)
+from awsenergylabelerlib.validations import (validate_allowed_denied_account_ids,
+                                             validate_allowed_denied_regions)
+
 from yaspin import yaspin
 
 from .validators import (ValidatePath,
@@ -124,7 +127,6 @@ def get_arguments():
     parser.add_argument('--frameworks',
                         '-f',
                         default=os.environ.get('FRAMEWORKS', DEFAULT_SECURITY_HUB_FRAMEWORKS),
-                        type=list,
                         nargs='*',
                         help='The list of applicable frameworks: \
                                 ["aws-foundational-security-best-practices", "cis", "pci-dss"], '
@@ -135,7 +137,6 @@ def get_arguments():
                               '-a',
                               nargs='*',
                               default=os.environ.get('ALLOWED_ACCOUNT_IDS'),
-                              type=list,
                               required=False,
                               help='A list of AWS Account IDs for which an energy label will be produced. '
                                    'Mutually exclusive with --denied-account-ids and --single-account-id arguments.')
@@ -143,7 +144,6 @@ def get_arguments():
                               '-d',
                               nargs='*',
                               default=os.environ.get('DENIED_ACCOUNT_IDS'),
-                              type=list,
                               required=False,
                               help='A list of AWS Account IDs that will be excluded from producing the energy label. '
                                    'Mutually exclusive with --allowed-account-ids and --single-account-id arguments.')
@@ -152,7 +152,6 @@ def get_arguments():
                              '-ar',
                              nargs='*',
                              default=os.environ.get('ALLOWED_REGIONS'),
-                             type=list,
                              required=False,
                              help='A list of AWS regions included in producing the energy label.'
                                   'Mutually exclusive with --denied-regions argument.')
@@ -160,7 +159,6 @@ def get_arguments():
                              '-dr',
                              nargs='*',
                              default=os.environ.get('DENIED_REGIONS'),
-                             type=list,
                              required=False,
                              help='A list of AWS regions excluded from producing the energy label.'
                                   'Mutually exclusive with --allowed-regions argument.')
@@ -199,10 +197,11 @@ def get_arguments():
     args = parser.parse_args()
     args.landing_zone_name, args.single_account_id = get_mutually_exclusive_args(args.landing_zone_name,
                                                                                  args.single_account_id)
-    args.allowed_account_ids, args.denied_account_ids = get_mutually_exclusive_args(args.allowed_account_ids,
-                                                                                    args.denied_account_ids)
-    args.allowed_regions, args.denied_regions = get_mutually_exclusive_args(args.allowed_regions,
-                                                                            args.denied_regions)
+    args.allowed_account_ids, args.denied_account_ids = validate_allowed_denied_account_ids(args.allowed_account_ids,
+                                                                                            args.denied_account_ids)
+    args.allowed_regions, args.denied_regions = validate_allowed_denied_regions(args.allowed_regions,
+                                                                                args.denied_regions)
+    args.frameworks = SecurityHub.validate_frameworks(args.frameworks)
     return args
 
 
