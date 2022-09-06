@@ -89,24 +89,23 @@ def get_arguments():
                         action='store',
                         dest='logger_config',
                         help='The location of the logging config json file',
-                        default=os.environ.get('LOG_CONFIG', ''))
+                        default=os.environ.get('AWS_LABELER_LOG_CONFIG', ''))
     parser.add_argument('--log-level',
                         '-L',
                         help='Provide the log level. Defaults to info.',
                         dest='log_level',
                         action='store',
-                        default=os.environ.get('LOG_LEVEL', 'info'),
+                        default=os.environ.get('AWS_LABELER_LOG_LEVEL', 'info'),
                         choices=['debug',
                                  'info',
                                  'warning',
                                  'error',
                                  'critical'])
-    scope = parser.add_mutually_exclusive_group(required=not (os.environ.get('LANDING_ZONE_NAME') or
-                                                              os.environ.get('SINGLE_ACCOUNT_ID')))
+    scope = parser.add_mutually_exclusive_group()
     scope.add_argument('--landing-zone-name',
                        '-n',
                        type=str,
-                       default=os.environ.get('LANDING_ZONE_NAME'),
+                       default=os.environ.get('AWS_LABELER_LANDING_ZONE_NAME'),
                        help='The name of the Landing Zone to label. '
                             'Mutually exclusive with --single-account-id argument.')
     single_account_action = scope.add_argument('--single-account-id',
@@ -115,18 +114,18 @@ def get_arguments():
                                                dest='single_account_id',
                                                action='store',
                                                type=aws_account_id,
-                                               default=os.environ.get('SINGLE_ACCOUNT_ID'),
+                                               default=os.environ.get('AWS_LABELER_SINGLE_ACCOUNT_ID'),
                                                help='Run the labeler on a single account. '
                                                     'Mutually exclusive with --landing-zone-name argument.')
     parser.add_argument('--region',
                         '-r',
-                        default=os.environ.get('REGION'),
+                        default=os.environ.get('AWS_LABELER_REGION'),
                         type=security_hub_region,
                         required=False,
                         help='The home AWS region, default is None')
     parser.add_argument('--frameworks',
                         '-f',
-                        default=os.environ.get('FRAMEWORKS', DEFAULT_SECURITY_HUB_FRAMEWORKS),
+                        default=os.environ.get('AWS_LABELER_FRAMEWORKS', DEFAULT_SECURITY_HUB_FRAMEWORKS),
                         nargs='*',
                         help='The list of applicable frameworks: \
                                 ["aws-foundational-security-best-practices", "cis", "pci-dss"], '
@@ -136,14 +135,14 @@ def get_arguments():
     account_list.add_argument('--allowed-account-ids',
                               '-a',
                               nargs='*',
-                              default=os.environ.get('ALLOWED_ACCOUNT_IDS'),
+                              default=os.environ.get('AWS_LABELER_ALLOWED_ACCOUNT_IDS'),
                               required=False,
                               help='A list of AWS Account IDs for which an energy label will be produced. '
                                    'Mutually exclusive with --denied-account-ids and --single-account-id arguments.')
     account_list.add_argument('--denied-account-ids',
                               '-d',
                               nargs='*',
-                              default=os.environ.get('DENIED_ACCOUNT_IDS'),
+                              default=os.environ.get('AWS_LABELER_DENIED_ACCOUNT_IDS'),
                               required=False,
                               help='A list of AWS Account IDs that will be excluded from producing the energy label. '
                                    'Mutually exclusive with --allowed-account-ids and --single-account-id arguments.')
@@ -151,14 +150,14 @@ def get_arguments():
     region_list.add_argument('--allowed-regions',
                              '-ar',
                              nargs='*',
-                             default=os.environ.get('ALLOWED_REGIONS'),
+                             default=os.environ.get('AWS_LABELER_ALLOWED_REGIONS'),
                              required=False,
                              help='A list of AWS regions included in producing the energy label.'
                                   'Mutually exclusive with --denied-regions argument.')
     region_list.add_argument('--denied-regions',
                              '-dr',
                              nargs='*',
-                             default=os.environ.get('DENIED_REGIONS'),
+                             default=os.environ.get('AWS_LABELER_DENIED_REGIONS'),
                              required=False,
                              help='A list of AWS regions excluded from producing the energy label.'
                                   'Mutually exclusive with --allowed-regions argument.')
@@ -166,7 +165,7 @@ def get_arguments():
                         '-p',
                         action=ValidatePath,
                         required=False,
-                        default=os.environ.get('EXPORT_PATH'),
+                        default=os.environ.get('AWS_LABELER_EXPORT_PATH'),
                         help='Exports a snapshot of chosen data in '
                              'JSON formatted files to the specified directory or S3 location.')
     export_options = parser.add_mutually_exclusive_group()
@@ -175,7 +174,7 @@ def get_arguments():
                                 action='store_const',
                                 dest='export_all',
                                 const=False,
-                                default=os.environ.get('EXPORT_METRICS'),
+                                default=os.environ.get('AWS_LABELER_EXPORT_METRICS'),
                                 help='Exports metrics/statistics without sensitive findings data in '
                                      'JSON formatted files to the specified directory or S3 location.')
     export_options.add_argument('--export-all',
@@ -183,7 +182,7 @@ def get_arguments():
                                 action='store_const',
                                 dest='export_all',
                                 const=True,
-                                default=os.environ.get('EXPORT_ALL', True),
+                                default=os.environ.get('AWS_LABELER_EXPORT_ALL', True),
                                 help='Exports metrics/statistics along with sensitive findings data in '
                                      'JSON formatted files to the specified directory or S3 location.')
     parser.add_argument('--to-json',
@@ -191,12 +190,13 @@ def get_arguments():
                         dest='to_json',
                         action='store_true',
                         required=False,
-                        default=os.environ.get('TO_JSON', False),
+                        default=os.environ.get('AWS_LABELER_TO_JSON', False),
                         help='Return the report in json format.')
     parser.set_defaults(export_all=True)
     args = parser.parse_args()
     args.landing_zone_name, args.single_account_id = get_mutually_exclusive_args(args.landing_zone_name,
-                                                                                 args.single_account_id)
+                                                                                 args.single_account_id,
+                                                                                 required=True)
     args.allowed_account_ids, args.denied_account_ids = validate_allowed_denied_account_ids(args.allowed_account_ids,
                                                                                             args.denied_account_ids)
     args.allowed_regions, args.denied_regions = validate_allowed_denied_regions(args.allowed_regions,

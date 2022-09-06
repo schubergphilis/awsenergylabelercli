@@ -40,7 +40,8 @@ from awsenergylabelerlib import (is_valid_account_id,
                                  DestinationPath,
                                  SECURITY_HUB_ACTIVE_REGIONS)
 
-from .awsenergylabelercliexceptions import MutuallyExclusiveArguments
+from .awsenergylabelercliexceptions import (MutuallyExclusiveArguments,
+                                           MissingRequiredArguments)
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -90,8 +91,10 @@ def security_hub_region(region):
     return region
 
 
-def get_mutually_exclusive_args(arg1, arg2):
+def get_mutually_exclusive_args(arg1, arg2, required=False):
     """Test if multiple mutually exclusive arguments are provided."""
     if arg1 and arg2:
         raise MutuallyExclusiveArguments(arg1, arg2)
+    if required and not (arg1 or arg2):
+        raise MissingRequiredArguments()
     return arg1, arg2
