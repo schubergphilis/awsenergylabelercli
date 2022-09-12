@@ -41,7 +41,7 @@ from awsenergylabelerlib import (is_valid_account_id,
                                  SECURITY_HUB_ACTIVE_REGIONS)
 
 from .awsenergylabelercliexceptions import (MutuallyExclusiveArguments,
-                                           MissingRequiredArguments)
+                                            MissingRequiredArguments)
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''

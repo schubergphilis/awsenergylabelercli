@@ -45,5 +45,6 @@ __status__ = '''Development'''  # "Prototype", "Development", "Production".
 class MutuallyExclusiveArguments(Exception):
     """Mutually exclusive variables are set."""
 
+
 class MissingRequiredArguments(Exception):
-   """Missing a required argument"""
+    """Missing a required argument."""
