@@ -92,3 +92,9 @@ History
 ------------------
 
 * Fixed list.append
+
+
+1.1.0 (13-09-2022)
+------------------
+
+* Added option to set environment variables instead of CLI flags.
