@@ -104,3 +104,9 @@ History
 ------------------
 
 * Bumped library version
+
+
+1.1.2 (26-09-2022)
+------------------
+
+* Bumped lib version
