@@ -98,3 +98,9 @@ History
 ------------------
 
 * Added option to set environment variables instead of CLI flags.
+
+
+1.1.1 (26-09-2022)
+------------------
+
+* Bumped library version
