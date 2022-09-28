@@ -5,7 +5,7 @@ awsenergylabelercli
 A cli to label accounts and landing zones with energy labels based on Security Hub finding.
 
 
-* Documentation: https://awsenergylabelercli.readthedocs.org/en/latest
+* Documentation: https://aws-energy-labeler-cli.readthedocs.io/en/latest/
 
 
 Development Workflow
