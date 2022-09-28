@@ -86,3 +86,27 @@ History
 ------------------
 
 * Matching underlying library refactoring.
+
+
+1.0.1 (11-07-2022)
+------------------
+
+* Fixed list.append
+
+
+1.1.0 (13-09-2022)
+------------------
+
+* Added option to set environment variables instead of CLI flags.
+
+
+1.1.1 (26-09-2022)
+------------------
+
+* Bumped library version
+
+
+1.1.2 (26-09-2022)
+------------------
+
+* Bumped lib version

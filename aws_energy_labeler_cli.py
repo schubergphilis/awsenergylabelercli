@@ -61,6 +61,7 @@ LOGGER.addHandler(logging.NullHandler())
 
 def _get_reporting_arguments(args):
     method_arguments = {'region': args.region,
+                        'frameworks': args.frameworks,
                         'allowed_regions': args.allowed_regions,
                         'denied_regions': args.denied_regions,
                         'export_all_data_flag': args.export_all,
