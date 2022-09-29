@@ -340,7 +340,8 @@ def get_account_reporting_data(account_id,
                                                       allowed_account_ids=[account_id],
                                                       denied_account_ids=None,
                                                       frameworks=frameworks)
-    security_hub_findings = wait_for_findings(security_hub.get_findings, query_filter, log_level)
+    unfiltered_findings = wait_for_findings(security_hub.get_findings, query_filter, log_level)
+    security_hub_findings = security_hub.filter_findings_by_frameworks(unfiltered_findings, frameworks)
     account.calculate_energy_label(security_hub_findings)
     report_data = [['Account ID:', account.id],
                    ['Account Security Score:', account.energy_label.label],
