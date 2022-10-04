@@ -110,3 +110,9 @@ History
 ------------------
 
 * Bumped lib version
+
+
+1.1.3 (04-10-2022)
+------------------
+
+* Fixed framework filtering for single accounts
