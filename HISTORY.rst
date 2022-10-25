@@ -116,3 +116,9 @@ History
 ------------------
 
 * Fixed framework filtering for single accounts
+
+
+2.0.0 (25-10-2022)
+------------------
+
+* Made region a required argument
