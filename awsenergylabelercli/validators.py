@@ -84,7 +84,7 @@ def aws_account_id(account_id):
 
 
 def security_hub_region(region):
-    """Setting a type for an security hub region."""
+    """Setting a type for a security hub region."""
     if not is_valid_region(region):
         raise ArgumentTypeError(f'Region {region} provided does not seem to be valid, valid regions are '
                                 f'{SECURITY_HUB_ACTIVE_REGIONS}.')

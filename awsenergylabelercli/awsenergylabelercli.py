@@ -119,10 +119,12 @@ def get_arguments():
                                                     'Mutually exclusive with --landing-zone-name argument.')
     parser.add_argument('--region',
                         '-r',
-                        default=os.environ.get('AWS_LABELER_REGION'),
+                        default=os.environ.get('AWS_LABELER_REGION') or os.environ.get('AWS_DEFAULT_REGION',
+                                                                                       'REGION_NOT_SET'),
                         type=security_hub_region,
-                        required=False,
-                        help='The home AWS region, default is None')
+                        required=True,
+                        help='The home AWS region, default is looking into the environment for either '
+                             '"AWS_LABELER_REGION" or "AWS_DEFAULT_REGION" variables.')
     parser.add_argument('--frameworks',
                         '-f',
                         default=os.environ.get('AWS_LABELER_FRAMEWORKS', DEFAULT_SECURITY_HUB_FRAMEWORKS),
@@ -243,7 +245,7 @@ def wait_for_findings(method_name, method_argument, log_level):
 
     """
     try:
-        if not log_level == 'debug':
+        if log_level != 'debug':
             with yaspin(text="Please wait while retrieving Security Hub findings...", color="yellow") as spinner:
                 findings = method_name(method_argument)
             spinner.ok("✅")
@@ -297,7 +299,7 @@ def get_landing_zone_reporting_data(landing_zone_name,
                    ['Landing Zone Security Score:', labeler.landing_zone_energy_label.label],
                    ['Landing Zone Percentage Coverage:', labeler.landing_zone_energy_label.coverage],
                    ['Labeled Accounts Measured:', labeler.labeled_accounts_energy_label.accounts_measured]]
-    if not labeler.landing_zone_energy_label.best_label == labeler.landing_zone_energy_label.worst_label:
+    if labeler.landing_zone_energy_label.best_label != labeler.landing_zone_energy_label.worst_label:
         report_data.extend([['Best Account Security Score:', labeler.landing_zone_energy_label.best_label],
                             ['Worst Account Security Score:', labeler.landing_zone_energy_label.worst_label]])
     export_types = ALL_LANDING_ZONE_EXPORT_TYPES if export_all_data_flag else LANDING_ZONE_METRIC_EXPORT_TYPES
