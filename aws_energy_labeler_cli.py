@@ -31,8 +31,8 @@ Main code for aws_energy_labeler_cli.
 
 """
 
-import logging
 import json
+import logging
 
 from art import text2art
 from awsenergylabelerlib import DataExporter
@@ -40,7 +40,7 @@ from terminaltables import AsciiTable
 
 from awsenergylabelercli import (get_arguments,
                                  setup_logging,
-                                 get_landing_zone_reporting_data,
+                                 get_zone_reporting_data,
                                  get_account_reporting_data)
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
@@ -66,15 +66,17 @@ def _get_reporting_arguments(args):
                         'denied_regions': args.denied_regions,
                         'export_all_data_flag': args.export_all,
                         'log_level': args.log_level}
-    if args.landing_zone_name:
-        get_reporting_data = get_landing_zone_reporting_data
-        method_arguments.update({'landing_zone_name': args.landing_zone_name,
-                                 'allowed_account_ids': args.allowed_account_ids,
-                                 'denied_account_ids': args.denied_account_ids})
-
-    else:
+    if args.single_account_id:
         get_reporting_data = get_account_reporting_data
         method_arguments.update({'account_id': args.single_account_id})
+    else:
+        zone_type = 'organizations_zone' if args.organizations_zone_name else 'audit_zone'
+        zone_name = args.organizations_zone_name or args.audit_zone_name
+        get_reporting_data = get_zone_reporting_data
+        method_arguments.update({'zone_name': zone_name,
+                                 'allowed_account_ids': args.allowed_account_ids,
+                                 'denied_account_ids': args.denied_account_ids,
+                                 'zone_type': zone_type})
     return get_reporting_data(**method_arguments)
 
 

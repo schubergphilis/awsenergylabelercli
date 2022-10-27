@@ -42,22 +42,24 @@ from awsenergylabelerlib import (EnergyLabeler,
                                  AwsAccount,
                                  SecurityHub,
                                  ACCOUNT_THRESHOLDS,
-                                 LANDING_ZONE_THRESHOLDS,
+                                 ZONE_THRESHOLDS,
                                  DEFAULT_SECURITY_HUB_FILTER,
                                  DEFAULT_SECURITY_HUB_FRAMEWORKS,
-                                 ALL_LANDING_ZONE_EXPORT_TYPES,
-                                 LANDING_ZONE_METRIC_EXPORT_TYPES,
+                                 ALL_ZONE_EXPORT_TYPES,
+                                 ZONE_METRIC_EXPORT_TYPES,
                                  ALL_ACCOUNT_EXPORT_TYPES,
                                  ACCOUNT_METRIC_EXPORT_TYPES)
-from awsenergylabelerlib.validations import (validate_allowed_denied_account_ids,
-                                             validate_allowed_denied_regions)
 
 from yaspin import yaspin
 
 from .validators import (ValidatePath,
+                         ValidateFrameworks,
                          aws_account_id,
-                         get_mutually_exclusive_args,
-                         security_hub_region)
+                         security_hub_region,
+                         ValidateAccountIds,
+                         ValidateRegions,
+                         character_delimited_list_variable,
+                         environment_variable_boolean)
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -82,8 +84,8 @@ def get_arguments():
     Returns the args as parsed from the argsparser.
     """
     # https://docs.python.org/3/library/argparse.html
-    parser = argparse.ArgumentParser(description='''A cli to label accounts and landing zones with energy labels based
-    on Security Hub finding.''')
+    parser = argparse.ArgumentParser(description='''A cli to label accounts and security zones with energy labels based
+    on Security Hub findings.''')
     parser.add_argument('--log-config',
                         '-l',
                         action='store',
@@ -101,13 +103,20 @@ def get_arguments():
                                  'warning',
                                  'error',
                                  'critical'])
-    scope = parser.add_mutually_exclusive_group()
-    scope.add_argument('--landing-zone-name',
-                       '-n',
+    scope = parser.add_mutually_exclusive_group(required=True)
+    scope.add_argument('--organizations-zone-name',
+                       '-o',
                        type=str,
-                       default=os.environ.get('AWS_LABELER_LANDING_ZONE_NAME'),
-                       help='The name of the Landing Zone to label. '
-                            'Mutually exclusive with --single-account-id argument.')
+                       default=os.environ.get('AWS_LABELER_ORGANIZATIONS_ZONE_NAME'),
+                       help='The name of the Organizations Zone to label. Implies access to organizations api in aws.'
+                            'Mutually exclusive with --single-account-id argument and --audit-zone-name.')
+    scope.add_argument('--audit-zone-name',
+                       '-z',
+                       type=str,
+                       default=os.environ.get('AWS_LABELER_AUDIT_ZONE_NAME'),
+                       help='The name of the Audit Zone to label. Does not need access to organizations api in aws, '
+                            'retrieves accounts from security hub, will not report on the audit account itself.'
+                            'Mutually exclusive with --single-account-id argument and --organizations-zone-name.')
     single_account_action = scope.add_argument('--single-account-id',
                                                '-s',
                                                required=False,
@@ -116,7 +125,8 @@ def get_arguments():
                                                type=aws_account_id,
                                                default=os.environ.get('AWS_LABELER_SINGLE_ACCOUNT_ID'),
                                                help='Run the labeler on a single account. '
-                                                    'Mutually exclusive with --landing-zone-name argument.')
+                                                    'Mutually exclusive with --organizations-zone-name and '
+                                                    '--audit-zone-name argument.')
     parser.add_argument('--region',
                         '-r',
                         default=os.environ.get('AWS_LABELER_REGION') or os.environ.get('AWS_DEFAULT_REGION',
@@ -128,39 +138,44 @@ def get_arguments():
     parser.add_argument('--frameworks',
                         '-f',
                         default=os.environ.get('AWS_LABELER_FRAMEWORKS', DEFAULT_SECURITY_HUB_FRAMEWORKS),
-                        nargs='*',
-                        help='The list of applicable frameworks: \
-                                ["aws-foundational-security-best-practices", "cis", "pci-dss"], '
-                             'default=["aws-foundational-security-best-practices"]')
+                        action=ValidateFrameworks,
+                        type=character_delimited_list_variable,
+                        help='The list of applicable frameworks: ["aws-foundational-security-best-practices", '
+                             '"cis", "pci-dss"], default=["aws-foundational-security-best-practices"]. '
+                             'Setting the flag with an empty string argument will set no frameworks for filters.')
     account_list = parser.add_mutually_exclusive_group()
     account_list._group_actions.append(single_account_action)  # pylint: disable=protected-access
     account_list.add_argument('--allowed-account-ids',
                               '-a',
-                              nargs='*',
+                              action=ValidateAccountIds,
                               default=os.environ.get('AWS_LABELER_ALLOWED_ACCOUNT_IDS'),
                               required=False,
+                              type=character_delimited_list_variable,
                               help='A list of AWS Account IDs for which an energy label will be produced. '
                                    'Mutually exclusive with --denied-account-ids and --single-account-id arguments.')
     account_list.add_argument('--denied-account-ids',
                               '-d',
-                              nargs='*',
+                              action=ValidateAccountIds,
                               default=os.environ.get('AWS_LABELER_DENIED_ACCOUNT_IDS'),
                               required=False,
+                              type=character_delimited_list_variable,
                               help='A list of AWS Account IDs that will be excluded from producing the energy label. '
                                    'Mutually exclusive with --allowed-account-ids and --single-account-id arguments.')
     region_list = parser.add_mutually_exclusive_group()
     region_list.add_argument('--allowed-regions',
                              '-ar',
-                             nargs='*',
+                             action=ValidateRegions,
                              default=os.environ.get('AWS_LABELER_ALLOWED_REGIONS'),
                              required=False,
+                             type=character_delimited_list_variable,
                              help='A list of AWS regions included in producing the energy label.'
                                   'Mutually exclusive with --denied-regions argument.')
     region_list.add_argument('--denied-regions',
                              '-dr',
-                             nargs='*',
+                             action=ValidateRegions,
                              default=os.environ.get('AWS_LABELER_DENIED_REGIONS'),
                              required=False,
+                             type=character_delimited_list_variable,
                              help='A list of AWS regions excluded from producing the energy label.'
                                   'Mutually exclusive with --allowed-regions argument.')
     parser.add_argument('--export-path',
@@ -170,23 +185,13 @@ def get_arguments():
                         default=os.environ.get('AWS_LABELER_EXPORT_PATH'),
                         help='Exports a snapshot of chosen data in '
                              'JSON formatted files to the specified directory or S3 location.')
-    export_options = parser.add_mutually_exclusive_group()
-    export_options.add_argument('--export-metrics',
-                                '-em',
-                                action='store_const',
-                                dest='export_all',
-                                const=False,
-                                default=os.environ.get('AWS_LABELER_EXPORT_METRICS'),
-                                help='Exports metrics/statistics without sensitive findings data in '
-                                     'JSON formatted files to the specified directory or S3 location.')
-    export_options.add_argument('--export-all',
-                                '-ea',
-                                action='store_const',
-                                dest='export_all',
-                                const=True,
-                                default=os.environ.get('AWS_LABELER_EXPORT_ALL', True),
-                                help='Exports metrics/statistics along with sensitive findings data in '
-                                     'JSON formatted files to the specified directory or S3 location.')
+    parser.add_argument('--export-metrics',
+                        '-e',
+                        action='store_false',
+                        dest='export_all',
+                        default=True,
+                        help='Exports metrics/statistics without sensitive findings data if set, in JSON formatted '
+                             'files to the specified directory or S3 location, default is export all data.')
     parser.add_argument('--to-json',
                         '-j',
                         dest='to_json',
@@ -194,16 +199,16 @@ def get_arguments():
                         required=False,
                         default=os.environ.get('AWS_LABELER_TO_JSON', False),
                         help='Return the report in json format.')
-    parser.set_defaults(export_all=True)
     args = parser.parse_args()
-    args.landing_zone_name, args.single_account_id = get_mutually_exclusive_args(args.landing_zone_name,
-                                                                                 args.single_account_id,
-                                                                                 required=True)
-    args.allowed_account_ids, args.denied_account_ids = validate_allowed_denied_account_ids(args.allowed_account_ids,
-                                                                                            args.denied_account_ids)
-    args.allowed_regions, args.denied_regions = validate_allowed_denied_regions(args.allowed_regions,
-                                                                                args.denied_regions)
-    args.frameworks = SecurityHub.validate_frameworks(args.frameworks)
+    # If one is set through an environment variable and the other through the arguments then the mutual exclusive
+    # check is not enforced, therefore we check again.
+    if all([args.allowed_account_ids, args.denied_account_ids]):
+        raise parser.error('argument --allowed-account-ids/-a: not allowed with argument --denied-account-ids/-d')
+    if all([args.allowed_regions, args.denied_regions]):
+        raise parser.error('argument --allowed-regions/-ar: not allowed with argument --denied-regions/-dr')
+    export_metrics_set = environment_variable_boolean(os.environ.get('AWS_LABELER_EXPORT_ONLY_METRICS'))
+    if export_metrics_set:
+        args.export_all = False
     return args
 
 
@@ -258,19 +263,20 @@ def wait_for_findings(method_name, method_argument, log_level):
 
 
 #  pylint: disable=too-many-arguments
-def get_landing_zone_reporting_data(landing_zone_name,
-                                    region,
-                                    frameworks,
-                                    allowed_account_ids,
-                                    denied_account_ids,
-                                    allowed_regions,
-                                    denied_regions,
-                                    export_all_data_flag,
-                                    log_level):
-    """Gets the reporting data for a landing zone.
+def get_zone_reporting_data(zone_name,
+                            region,
+                            frameworks,
+                            allowed_account_ids,
+                            denied_account_ids,
+                            allowed_regions,
+                            denied_regions,
+                            export_all_data_flag,
+                            log_level,
+                            zone_type):
+    """Gets the reporting data for an organizations zone.
 
     Args:
-        landing_zone_name: The name of the landing zone.
+        zone_name: The name of the security zone.
         region: The home region of AWS.
         frameworks: The frameworks to include in scoring.
         allowed_account_ids: The allowed account ids for landing zone inclusion if any.
@@ -279,35 +285,37 @@ def get_landing_zone_reporting_data(landing_zone_name,
         denied_regions: The denied regions for security hub if any.
         export_all_data_flag: If set all data is going to be exported, else only basic reporting.
         log_level: The log level set.
+        zone_type: The type of zone to label.
 
     Returns:
         report_data, exporter_arguments
 
     """
-    labeler = EnergyLabeler(landing_zone_name=landing_zone_name,
+    labeler = EnergyLabeler(zone_name=zone_name,
                             region=region,
                             account_thresholds=ACCOUNT_THRESHOLDS,
-                            landing_zone_thresholds=LANDING_ZONE_THRESHOLDS,
+                            zone_thresholds=ZONE_THRESHOLDS,
                             security_hub_filter=DEFAULT_SECURITY_HUB_FILTER,
                             frameworks=frameworks,
                             allowed_account_ids=allowed_account_ids,
                             denied_account_ids=denied_account_ids,
                             allowed_regions=allowed_regions,
-                            denied_regions=denied_regions)
+                            denied_regions=denied_regions,
+                            zone_type=zone_type)
     wait_for_findings(EnergyLabeler.security_hub_findings.fget, labeler, log_level)
-    report_data = [['Landing Zone:', labeler.landing_zone.name],
-                   ['Landing Zone Security Score:', labeler.landing_zone_energy_label.label],
-                   ['Landing Zone Percentage Coverage:', labeler.landing_zone_energy_label.coverage],
+    report_data = [['Zone:', labeler.zone.name],
+                   ['Zone Security Score:', labeler.zone_energy_label.label],
+                   ['Zone Percentage Coverage:', labeler.zone_energy_label.coverage],
                    ['Labeled Accounts Measured:', labeler.labeled_accounts_energy_label.accounts_measured]]
-    if labeler.landing_zone_energy_label.best_label != labeler.landing_zone_energy_label.worst_label:
-        report_data.extend([['Best Account Security Score:', labeler.landing_zone_energy_label.best_label],
-                            ['Worst Account Security Score:', labeler.landing_zone_energy_label.worst_label]])
-    export_types = ALL_LANDING_ZONE_EXPORT_TYPES if export_all_data_flag else LANDING_ZONE_METRIC_EXPORT_TYPES
+    if labeler.zone_energy_label.best_label != labeler.zone_energy_label.worst_label:
+        report_data.extend([['Best Account Security Score:', labeler.zone_energy_label.best_label],
+                            ['Worst Account Security Score:', labeler.zone_energy_label.worst_label]])
+    export_types = ALL_ZONE_EXPORT_TYPES if export_all_data_flag else ZONE_METRIC_EXPORT_TYPES
     exporter_arguments = {'export_types': export_types,
-                          'name': labeler.landing_zone.name,
-                          'energy_label': labeler.landing_zone_energy_label.label,
+                          'name': labeler.zone.name,
+                          'energy_label': labeler.zone_energy_label.label,
                           'security_hub_findings': labeler.security_hub_findings,
-                          'labeled_accounts': labeler.landing_zone_labeled_accounts}
+                          'labeled_accounts': labeler.zone_labeled_accounts}
     return report_data, exporter_arguments
 
 

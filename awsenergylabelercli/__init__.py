@@ -34,7 +34,7 @@ Import all parts from awsenergylabelercli here
 from ._version import __version__
 from .awsenergylabelercli import (get_arguments,
                                   setup_logging,
-                                  get_landing_zone_reporting_data,
+                                  get_zone_reporting_data,
                                   get_account_reporting_data)
 
 __author__ = '''Theodoor Scholte <tscholte@schubergphilis.com>'''
@@ -51,5 +51,5 @@ assert __version__
 
 assert get_arguments
 assert setup_logging
-assert get_landing_zone_reporting_data
+assert get_zone_reporting_data
 assert get_account_reporting_data

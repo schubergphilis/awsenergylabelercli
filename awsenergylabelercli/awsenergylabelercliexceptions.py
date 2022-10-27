@@ -40,11 +40,3 @@ __license__ = '''MIT'''
 __maintainer__ = '''Theodoor Scholte'''
 __email__ = '''<tscholte@schubergphilis.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
-
-
-class MutuallyExclusiveArguments(Exception):
-    """Mutually exclusive variables are set."""
-
-
-class MissingRequiredArguments(Exception):
-    """Missing a required argument."""

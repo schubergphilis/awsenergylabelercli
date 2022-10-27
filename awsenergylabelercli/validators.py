@@ -33,15 +33,19 @@ Main code for validators.
 
 import argparse
 import logging
+import re
 from argparse import ArgumentTypeError
 
 from awsenergylabelerlib import (is_valid_account_id,
                                  is_valid_region,
                                  DestinationPath,
-                                 SECURITY_HUB_ACTIVE_REGIONS)
-
-from .awsenergylabelercliexceptions import (MutuallyExclusiveArguments,
-                                            MissingRequiredArguments)
+                                 SECURITY_HUB_ACTIVE_REGIONS,
+                                 SecurityHub,
+                                 InvalidFrameworks,
+                                 validate_account_ids,
+                                 validate_regions,
+                                 InvalidAccountListProvided,
+                                 InvalidRegionListProvided)
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -62,17 +66,45 @@ LOGGER.addHandler(logging.NullHandler())
 class ValidatePath(argparse.Action):  # pylint: disable=too-few-public-methods
     """Validates a given path."""
 
-    def __init__(self, option_strings, dest, nargs=None, **kwargs):
-        if nargs is not None:
-            raise ValueError("nargs not allowed")
-        super(ValidatePath, self).__init__(option_strings, dest, **kwargs)
-
     def __call__(self, parser, namespace, values, option_string=None):
         destination = DestinationPath(values)
         if not destination.is_valid():
-            raise argparse.ArgumentTypeError(f'{values} is an invalid export location. '
-                                             f'Example --export-path /a/directory or '
-                                             f'--export-path s3://mybucket location')
+            raise parser.error(f'{values} is an invalid export location. Example --export-path '
+                               f'/a/directory or --export-path s3://mybucket location')
+        setattr(namespace, self.dest, values)
+
+
+class ValidateFrameworks(argparse.Action):  # pylint: disable=too-few-public-methods
+    """Validates that the values provided are valid and supported aws security hub frameworks."""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        try:
+            SecurityHub.validate_frameworks(values)
+        except InvalidFrameworks:
+            raise parser.error(f'{values} are not valid supported security hub frameworks. Currently '
+                               f'supported are {SecurityHub.frameworks}') from None
+        setattr(namespace, self.dest, values)
+
+
+class ValidateAccountIds(argparse.Action):  # pylint: disable=too-few-public-methods
+    """Validates that the values provided are valid and supported aws security hub frameworks."""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        try:
+            validate_account_ids(values)
+        except InvalidAccountListProvided:
+            raise parser.error(f'{values} contains invalid accounts IDS') from None
+        setattr(namespace, self.dest, values)
+
+
+class ValidateRegions(argparse.Action):  # pylint: disable=too-few-public-methods
+    """Validates that the values provided are valid and supported aws security hub frameworks."""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        try:
+            validate_regions(values)
+        except InvalidRegionListProvided:
+            raise parser.error(f'Invalid regions in provided arguments: {values}') from None
         setattr(namespace, self.dest, values)
 
 
@@ -91,10 +123,25 @@ def security_hub_region(region):
     return region
 
 
-def get_mutually_exclusive_args(arg1, arg2, required=False):
-    """Test if multiple mutually exclusive arguments are provided."""
-    if arg1 and arg2:
-        raise MutuallyExclusiveArguments(arg1, arg2)
-    if required and not (arg1 or arg2):
-        raise MissingRequiredArguments()
-    return arg1, arg2
+def character_delimited_list_variable(value):
+    """Support for environment variables with characters delimiting a list of value."""
+    delimiting_characters = '[,|\\s]'
+    result = [entry for entry in re.split(delimiting_characters, value) if entry]
+    if len(result) == 1:
+        return result[0]
+    return result
+
+
+def environment_variable_boolean(value):
+    """Parses an environment variable as a boolean.
+
+    Args:
+        value: The value of the environment variable.
+
+    Returns:
+        True if environment variable is one of the supported values, False otherwise.
+
+    """
+    if value in [True, 't', 'T', 'true', 'True', 1, '1', 'TRUE']:
+        return True
+    return False
