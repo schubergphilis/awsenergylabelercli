@@ -237,16 +237,16 @@ def get_arguments(arguments=None):  # noqa: MC0001
     except InvalidFrameworks:
         raise parser.error(f'{args.frameworks} are not valid supported security hub frameworks. Currently supported '
                            f'are {SecurityHub.frameworks}')
-    try:
-        for argument in ['allowed_account_ids', 'denied_account_ids']:
+    for argument in ['allowed_account_ids', 'denied_account_ids']:
+        try:
             _ = validate_account_ids(getattr(args, argument))
-    except InvalidAccountListProvided:
-        raise parser.error(f'{getattr(args, argument)} contains invalid account ids.')
-    try:
-        for argument in ['allowed_regions', 'denied_regions']:
+        except InvalidAccountListProvided:
+            raise parser.error(f'{getattr(args, argument)} contains invalid account ids.')
+    for argument in ['allowed_regions', 'denied_regions']:
+        try:
             _ = validate_regions(getattr(args, argument))
-    except InvalidRegionListProvided:
-        raise parser.error(f'{getattr(args, argument)} contains invalid regions.')
+        except InvalidRegionListProvided:
+            raise parser.error(f'{getattr(args, argument)} contains invalid regions.')
     if args.export_path and not DestinationPath(args.export_path).is_valid():
         raise parser.error(f'{args.export_path} is an invalid export location. Example --export-path '
                            f'/a/directory or --export-path s3://mybucket location')
