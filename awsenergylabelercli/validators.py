@@ -33,19 +33,15 @@ Main code for validators.
 
 import argparse
 import logging
+import os
 import re
 from argparse import ArgumentTypeError
 
 from awsenergylabelerlib import (is_valid_account_id,
                                  is_valid_region,
-                                 DestinationPath,
-                                 SECURITY_HUB_ACTIVE_REGIONS,
-                                 SecurityHub,
-                                 InvalidFrameworks,
-                                 validate_account_ids,
-                                 validate_regions,
-                                 InvalidAccountListProvided,
-                                 InvalidRegionListProvided)
+                                 SECURITY_HUB_ACTIVE_REGIONS)
+
+from .awsenergylabelercliexceptions import MutuallyExclusiveArguments, MissingRequiredArguments
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -61,51 +57,6 @@ __status__ = '''Development'''  # "Prototype", "Development", "Production".
 LOGGER_BASENAME = '''validators'''
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
-
-
-class ValidatePath(argparse.Action):  # pylint: disable=too-few-public-methods
-    """Validates a given path."""
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        destination = DestinationPath(values)
-        if not destination.is_valid():
-            raise parser.error(f'{values} is an invalid export location. Example --export-path '
-                               f'/a/directory or --export-path s3://mybucket location')
-        setattr(namespace, self.dest, values)
-
-
-class ValidateFrameworks(argparse.Action):  # pylint: disable=too-few-public-methods
-    """Validates that the values provided are valid and supported aws security hub frameworks."""
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        try:
-            SecurityHub.validate_frameworks(values)
-        except InvalidFrameworks:
-            raise parser.error(f'{values} are not valid supported security hub frameworks. Currently '
-                               f'supported are {SecurityHub.frameworks}') from None
-        setattr(namespace, self.dest, values)
-
-
-class ValidateAccountIds(argparse.Action):  # pylint: disable=too-few-public-methods
-    """Validates that the values provided are valid and supported aws security hub frameworks."""
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        try:
-            validate_account_ids(values)
-        except InvalidAccountListProvided:
-            raise parser.error(f'{values} contains invalid accounts IDS') from None
-        setattr(namespace, self.dest, values)
-
-
-class ValidateRegions(argparse.Action):  # pylint: disable=too-few-public-methods
-    """Validates that the values provided are valid and supported aws security hub frameworks."""
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        try:
-            validate_regions(values)
-        except InvalidRegionListProvided:
-            raise parser.error(f'Invalid regions in provided arguments: {values}') from None
-        setattr(namespace, self.dest, values)
 
 
 def aws_account_id(account_id):
@@ -125,8 +76,9 @@ def security_hub_region(region):
 
 def character_delimited_list_variable(value):
     """Support for environment variables with characters delimiting a list of value."""
+    print(value)
     delimiting_characters = '[,|\\s]'
-    result = [entry for entry in re.split(delimiting_characters, value) if entry]
+    result = [entry for entry in re.split(delimiting_characters, str(value)) if entry]
     if len(result) == 1:
         return result[0]
     return result
@@ -145,3 +97,64 @@ def environment_variable_boolean(value):
     if value in [True, 't', 'T', 'true', 'True', 1, '1', 'TRUE']:
         return True
     return False
+
+
+def positive_integer(value):
+    """Casts an argument to an int and validates that it is a positive number.
+
+    Args:
+        value: The value to cast.
+
+    Returns:
+        The positive integer.
+
+    Raises:
+        ArgumentTypeError: If the argument cannot be cast or if it is a negative number.
+
+    """
+    if value is None:
+        return value
+    try:
+        num_value = int(value)
+    except ValueError:
+        num_value = -1
+    if num_value <= 0:
+        raise ArgumentTypeError(f'{value} is an invalid positive int value')
+    return num_value
+
+
+def get_mutually_exclusive_args(*args, required=False):
+    """Test if multiple mutually exclusive arguments are provided."""
+    set_arguments = [arg for arg in args if arg]
+    if len(set_arguments) > 1:
+        raise MutuallyExclusiveArguments(*set_arguments)
+    if required and not any(set_arguments):
+        raise MissingRequiredArguments()
+    return args
+
+
+def default_environment_variable(variable_name):
+    """Closure to pass the variable name to the inline custom Action.
+
+    Args:
+        variable_name: The variable to look up as environment variable.
+
+    Returns:
+        The Action object.
+
+    """
+
+    class DefaultEnvVar(argparse.Action):  # pylint: disable=too-few-public-methods
+        """Default Environment Variable."""
+
+        def __init__(self, *args, **kwargs):
+            if variable_name in os.environ:
+                kwargs['default'] = os.environ[variable_name]
+            if kwargs.get('required') and kwargs.get('default'):
+                kwargs['required'] = False
+            super(DefaultEnvVar, self).__init__(*args, **kwargs)
+
+        def __call__(self, parser, namespace, values, option_string=None):
+            setattr(namespace, self.dest, values)
+
+    return DefaultEnvVar

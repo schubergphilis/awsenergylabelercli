@@ -38,8 +38,11 @@ import logging.config
 import os
 
 import coloredlogs
-from awsenergylabelerlib import (EnergyLabeler,
+from awsenergylabelerlib import (validate_regions,
+                                 validate_account_ids,
                                  AwsAccount,
+                                 EnergyLabeler,
+                                 DestinationPath,
                                  SecurityHub,
                                  ACCOUNT_THRESHOLDS,
                                  ZONE_THRESHOLDS,
@@ -48,18 +51,21 @@ from awsenergylabelerlib import (EnergyLabeler,
                                  ALL_ZONE_EXPORT_TYPES,
                                  ZONE_METRIC_EXPORT_TYPES,
                                  ALL_ACCOUNT_EXPORT_TYPES,
-                                 ACCOUNT_METRIC_EXPORT_TYPES)
-
+                                 ACCOUNT_METRIC_EXPORT_TYPES,
+                                 InvalidFrameworks,
+                                 InvalidAccountListProvided,
+                                 InvalidRegionListProvided)
 from yaspin import yaspin
 
-from .validators import (ValidatePath,
-                         ValidateFrameworks,
-                         aws_account_id,
-                         security_hub_region,
-                         ValidateAccountIds,
-                         ValidateRegions,
+from .awsenergylabelercliexceptions import MissingRequiredArguments, MutuallyExclusiveArguments
+from .validators import (aws_account_id,
                          character_delimited_list_variable,
-                         environment_variable_boolean)
+                         environment_variable_boolean,
+                         default_environment_variable,
+                         get_mutually_exclusive_args,
+                         positive_integer,
+                         security_hub_region
+                         )
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -77,131 +83,133 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
-def get_arguments():
-    """
-    Gets us the cli arguments.
-
-    Returns the args as parsed from the argsparser.
-    """
+def get_parser():
+    """Constructs the parser with all the arguments and returns it."""
     # https://docs.python.org/3/library/argparse.html
     parser = argparse.ArgumentParser(description='''A cli to label accounts and security zones with energy labels based
     on Security Hub findings.''')
     parser.add_argument('--log-config',
                         '-l',
-                        action='store',
+                        action=default_environment_variable('AWS_LABELER_LOG_CONFIG'),
                         dest='logger_config',
-                        help='The location of the logging config json file',
-                        default=os.environ.get('AWS_LABELER_LOG_CONFIG', ''))
+                        help='The location of the logging config json file')
     parser.add_argument('--log-level',
                         '-L',
                         help='Provide the log level. Defaults to info.',
                         dest='log_level',
-                        action='store',
-                        default=os.environ.get('AWS_LABELER_LOG_LEVEL', 'info'),
+                        action=default_environment_variable('AWS_LABELER_LOG_LEVEL'),
+                        default='info',
                         choices=['debug',
                                  'info',
                                  'warning',
                                  'error',
                                  'critical'])
-    scope = parser.add_mutually_exclusive_group(required=True)
-    scope.add_argument('--organizations-zone-name',
-                       '-o',
-                       type=str,
-                       default=os.environ.get('AWS_LABELER_ORGANIZATIONS_ZONE_NAME'),
-                       help='The name of the Organizations Zone to label. Implies access to organizations api in aws.'
-                            'Mutually exclusive with --single-account-id argument and --audit-zone-name.')
-    scope.add_argument('--audit-zone-name',
-                       '-z',
-                       type=str,
-                       default=os.environ.get('AWS_LABELER_AUDIT_ZONE_NAME'),
-                       help='The name of the Audit Zone to label. Does not need access to organizations api in aws, '
-                            'retrieves accounts from security hub, will not report on the audit account itself.'
-                            'Mutually exclusive with --single-account-id argument and --organizations-zone-name.')
-    single_account_action = scope.add_argument('--single-account-id',
-                                               '-s',
-                                               required=False,
-                                               dest='single_account_id',
-                                               action='store',
-                                               type=aws_account_id,
-                                               default=os.environ.get('AWS_LABELER_SINGLE_ACCOUNT_ID'),
-                                               help='Run the labeler on a single account. '
-                                                    'Mutually exclusive with --organizations-zone-name and '
-                                                    '--audit-zone-name argument.')
     parser.add_argument('--region',
                         '-r',
-                        default=os.environ.get('AWS_LABELER_REGION') or os.environ.get('AWS_DEFAULT_REGION',
-                                                                                       'REGION_NOT_SET'),
+                        action=default_environment_variable('AWS_LABELER_REGION'),
                         type=security_hub_region,
                         required=True,
                         help='The home AWS region, default is looking into the environment for either '
                              '"AWS_LABELER_REGION" or "AWS_DEFAULT_REGION" variables.')
+    parser.add_argument('--organizations-zone-name',
+                        '-o',
+                        action=default_environment_variable('AWS_LABELER_ORGANIZATIONS_ZONE_NAME'),
+                        help='The name of the Organizations Zone to label. Implies access to organizations api in aws.'
+                             'Mutually exclusive with --single-account-id argument and --audit-zone-name.')
+    parser.add_argument('--audit-zone-name',
+                        '-z',
+                        action=default_environment_variable('AWS_LABELER_AUDIT_ZONE_NAME'),
+                        help='The name of the Audit Zone to label. Does not need access to organizations api in aws, '
+                             'retrieves accounts from security hub, will not report on the audit account itself.'
+                             'Mutually exclusive with --single-account-id argument and --organizations-zone-name.')
+    parser.add_argument('--single-account-id',
+                        '-s',
+                        type=aws_account_id,
+                        action=default_environment_variable('AWS_LABELER_SINGLE_ACCOUNT_ID'),
+                        help='Run the labeler on a single account. '
+                             'Mutually exclusive with --organizations-zone-name and '
+                             '--audit-zone-name argument.')
     parser.add_argument('--frameworks',
                         '-f',
                         default=os.environ.get('AWS_LABELER_FRAMEWORKS', DEFAULT_SECURITY_HUB_FRAMEWORKS),
-                        action=ValidateFrameworks,
                         type=character_delimited_list_variable,
                         help='The list of applicable frameworks: ["aws-foundational-security-best-practices", '
                              '"cis", "pci-dss"], default=["aws-foundational-security-best-practices"]. '
                              'Setting the flag with an empty string argument will set no frameworks for filters.')
-    account_list = parser.add_mutually_exclusive_group()
-    account_list._group_actions.append(single_account_action)  # pylint: disable=protected-access
-    account_list.add_argument('--allowed-account-ids',
-                              '-a',
-                              action=ValidateAccountIds,
-                              default=os.environ.get('AWS_LABELER_ALLOWED_ACCOUNT_IDS'),
-                              required=False,
-                              type=character_delimited_list_variable,
-                              help='A list of AWS Account IDs for which an energy label will be produced. '
-                                   'Mutually exclusive with --denied-account-ids and --single-account-id arguments.')
-    account_list.add_argument('--denied-account-ids',
-                              '-d',
-                              action=ValidateAccountIds,
-                              default=os.environ.get('AWS_LABELER_DENIED_ACCOUNT_IDS'),
-                              required=False,
-                              type=character_delimited_list_variable,
-                              help='A list of AWS Account IDs that will be excluded from producing the energy label. '
-                                   'Mutually exclusive with --allowed-account-ids and --single-account-id arguments.')
-    region_list = parser.add_mutually_exclusive_group()
-    region_list.add_argument('--allowed-regions',
-                             '-ar',
-                             action=ValidateRegions,
-                             default=os.environ.get('AWS_LABELER_ALLOWED_REGIONS'),
-                             required=False,
-                             type=character_delimited_list_variable,
-                             help='A list of AWS regions included in producing the energy label.'
-                                  'Mutually exclusive with --denied-regions argument.')
-    region_list.add_argument('--denied-regions',
-                             '-dr',
-                             action=ValidateRegions,
-                             default=os.environ.get('AWS_LABELER_DENIED_REGIONS'),
-                             required=False,
-                             type=character_delimited_list_variable,
-                             help='A list of AWS regions excluded from producing the energy label.'
-                                  'Mutually exclusive with --allowed-regions argument.')
+    parser.add_argument('--allowed-account-ids',
+                        '-a',
+                        action=default_environment_variable('AWS_LABELER_ALLOWED_ACCOUNT_IDS'),
+                        type=character_delimited_list_variable,
+                        help='A list of AWS Account IDs for which an energy label will be produced. '
+                             'Mutually exclusive with --denied-account-ids and --single-account-id arguments.')
+    parser.add_argument('--denied-account-ids',
+                        '-d',
+                        action=default_environment_variable('AWS_LABELER_DENIED_ACCOUNT_IDS'),
+                        type=character_delimited_list_variable,
+                        help='A list of AWS Account IDs that will be excluded from producing the energy label. '
+                             'Mutually exclusive with --allowed-account-ids and --single-account-id arguments.')
+    parser.add_argument('--allowed-regions',
+                        '-ar',
+                        action=default_environment_variable('AWS_LABELER_ALLOWED_REGIONS'),
+                        type=character_delimited_list_variable,
+                        help='A list of AWS regions included in producing the energy label.'
+                             'Mutually exclusive with --denied-regions argument.')
+    parser.add_argument('--denied-regions',
+                        '-dr',
+                        action=default_environment_variable('AWS_LABELER_DENIED_REGIONS'),
+                        type=character_delimited_list_variable,
+                        help='A list of AWS regions excluded from producing the energy label.'
+                             'Mutually exclusive with --allowed-regions argument.')
     parser.add_argument('--export-path',
                         '-p',
-                        action=ValidatePath,
-                        required=False,
-                        default=os.environ.get('AWS_LABELER_EXPORT_PATH'),
+                        action=default_environment_variable('AWS_LABELER_EXPORT_PATH'),
                         help='Exports a snapshot of chosen data in '
                              'JSON formatted files to the specified directory or S3 location.')
-    parser.add_argument('--export-metrics',
+    parser.add_argument('--export-metrics-only',
                         '-e',
-                        action='store_false',
                         dest='export_all',
-                        default=True,
+                        action='store_false',
                         help='Exports metrics/statistics without sensitive findings data if set, in JSON formatted '
                              'files to the specified directory or S3 location, default is export all data.')
     parser.add_argument('--to-json',
                         '-j',
-                        dest='to_json',
                         action='store_true',
-                        required=False,
-                        default=os.environ.get('AWS_LABELER_TO_JSON', False),
+                        default=environment_variable_boolean(os.environ.get('AWS_LABELER_TO_JSON', False)),
                         help='Return the report in json format.')
-    args = parser.parse_args()
-    # If one is set through an environment variable and the other through the arguments then the mutual exclusive
-    # check is not enforced, therefore we check again.
+    parser.add_argument('--report-metadata',
+                        '-m',
+                        action='store_true',
+                        default=environment_variable_boolean(os.environ.get('AWS_LABELER_REPORT_METADATA')),
+                        help='If set the report will contain info about the tool version and the timestamp of the '
+                             'execution')
+    parser.add_argument('--report-closed-findings-days',
+                        '-rd',
+                        action='store',
+                        required=False,
+                        default=positive_integer(os.environ.get('AWS_LABELER_REPORT_CLOSED_FINDINGS_DAYS')),
+                        type=positive_integer,
+                        help='If set the report will contain info on the number of findings that were closed during the'
+                             ' provided days count')
+    parser.add_argument('--report-suppressed-findings',
+                        '-rs',
+                        action='store_true',
+                        default=environment_variable_boolean(os.environ.get('AWS_LABELER_REPORT_SUPPRESSED_FINDINGS',
+                                                                            False)),
+                        help='If set the report will contain info on the number of suppressed findings')
+    parser.set_defaults(export_all=True)
+    return parser
+
+
+def get_arguments(arguments=None):  # noqa: MC0001
+    """
+    Gets us the cli arguments.
+
+    Returns the args as parsed from the argsparser.
+    """
+    parser = get_parser()
+    args = parser.parse_args(arguments)
+    # Since mutual exclusive cannot work with environment variables we need to check explicitly for all pairs of
+    # mutual relations that are not allowed.
     if all([args.allowed_account_ids, args.denied_account_ids]):
         raise parser.error('argument --allowed-account-ids/-a: not allowed with argument --denied-account-ids/-d')
     if all([args.allowed_regions, args.denied_regions]):
@@ -209,6 +217,39 @@ def get_arguments():
     export_metrics_set = environment_variable_boolean(os.environ.get('AWS_LABELER_EXPORT_ONLY_METRICS'))
     if export_metrics_set:
         args.export_all = False
+    exclusive_args = [args.organizations_zone_name, args.audit_zone_name, args.single_account_id]
+    try:
+        _ = get_mutually_exclusive_args(*exclusive_args, required=True)
+    except MissingRequiredArguments:
+        raise parser.error('one of the arguments --organizations-zone-name/-o --audit-zone-name/-z '
+                           '--single-account-id/-s is required')
+    except MutuallyExclusiveArguments:
+        raise parser.error('arguments --organizations-zone-name/-o --audit-zone-name/-z '
+                           '--single-account-id/-s are mutually exclusive')
+    exclusive_args = [args.allowed_account_ids, args.denied_account_ids, args.single_account_id]
+    try:
+        _ = get_mutually_exclusive_args(*exclusive_args)
+    except MutuallyExclusiveArguments:
+        raise parser.error('arguments --allowed-account-ids/-a --denied-account-ids/-d --single-account-id/-s are '
+                           'mutually exclusive')
+    try:
+        SecurityHub.validate_frameworks(args.frameworks)
+    except InvalidFrameworks:
+        raise parser.error(f'{args.frameworks} are not valid supported security hub frameworks. Currently supported '
+                           f'are {SecurityHub.frameworks}')
+    try:
+        for argument in ['allowed_account_ids', 'denied_account_ids']:
+            _ = validate_account_ids(getattr(args, argument))
+    except InvalidAccountListProvided:
+        raise parser.error(f'{getattr(args, argument)} contains invalid account ids.')
+    try:
+        for argument in ['allowed_regions', 'denied_regions']:
+            _ = validate_regions(getattr(args, argument))
+    except InvalidRegionListProvided:
+        raise parser.error(f'{getattr(args, argument)} contains invalid regions.')
+    if args.export_path and not DestinationPath(args.export_path).is_valid():
+        raise parser.error(f'{args.export_path} is an invalid export location. Example --export-path '
+                           f'/a/directory or --export-path s3://mybucket location')
     return args
 
 
