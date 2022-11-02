@@ -186,7 +186,7 @@ def get_parser():
                         '-rd',
                         action='store',
                         required=False,
-                        default=positive_integer(os.environ.get('AWS_LABELER_REPORT_CLOSED_FINDINGS_DAYS')),
+                        default=os.environ.get('AWS_LABELER_REPORT_CLOSED_FINDINGS_DAYS'),
                         type=positive_integer,
                         help='If set the report will contain info on the number of findings that were closed during the'
                              ' provided days count')
@@ -199,12 +199,12 @@ def get_parser():
     parser.add_argument('--account-thresholds',
                         '-at',
                         type=json_string,
-                        default=json_string(os.environ.get('AWS_LABELER_ACCOUNT_THRESHOLDS')),
+                        default=os.environ.get('AWS_LABELER_ACCOUNT_THRESHOLDS'),
                         help='If set the account thresholds will be used instead of the default ones.')
     parser.add_argument('--zone-thresholds',
                         '-zt',
                         type=json_string,
-                        default=json_string(os.environ.get('AWS_LABELER_ZONE_THRESHOLDS')),
+                        default=os.environ.get('AWS_LABELER_ZONE_THRESHOLDS'),
                         help='If set the zone thresholds will be used instead of the default ones.')
     parser.set_defaults(export_all=True)
     return parser
