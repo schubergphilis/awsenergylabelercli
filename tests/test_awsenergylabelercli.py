@@ -39,8 +39,8 @@ import os
 import sys
 import unittest
 
-from awsenergylabelercli import get_arguments
-from awsenergylabelerlib import SECURITY_HUB_ACTIVE_REGIONS
+from awsenergylabelercli import get_arguments, get_parser
+from awsenergylabelerlib import SECURITY_HUB_ACTIVE_REGIONS, DEFAULT_SECURITY_HUB_FRAMEWORKS, SecurityHub
 
 
 @contextlib.contextmanager
@@ -95,13 +95,24 @@ class TestAwsenergylabelercli(unittest.TestCase):
 
 
 class TestRegion(unittest.TestCase):
+
+    def setUp(self):
+        """
+        Test set up
+
+        This is where you can setup things that you use throughout the tests. This method is called before every test.
+        """
+        self.missing_arguments_message = 'the following arguments are required: --region/-r'
+        self.error_message = ('argument --region/-r: Region {invalid_region} provided does not seem to be valid, valid ' \
+                              'regions are {SECURITY_HUB_ACTIVE_REGIONS}.')
+
     def test_missing_region(self):
-        self.assertTrue(get_parsing_error_message(get_arguments, []) == 'the following arguments are required: --region/-r')
+        self.assertTrue(get_parsing_error_message(get_arguments, []) == self.missing_arguments_message)
 
     def test_invalid_region(self):
         invalid_region = 'bob'
-        error_message = f'argument --region/-r: Region {invalid_region} provided does not seem to be valid, valid ' \
-                        f'regions are {SECURITY_HUB_ACTIVE_REGIONS}.'
+        error_message = self.error_message.format(invalid_region=invalid_region,
+                                                  SECURITY_HUB_ACTIVE_REGIONS=SECURITY_HUB_ACTIVE_REGIONS)
         self.assertTrue(get_parsing_error_message(get_arguments, ['-r', invalid_region]) == error_message)
 
     def test_valid_region_argument_provided(self):
@@ -119,14 +130,14 @@ class TestRegion(unittest.TestCase):
     def test_invalid_region_env_var_provided(self):
         invalid_region = 'bob'
         os.environ['AWS_LABELER_REGION'] = invalid_region
-        error_message = f'argument --region/-r: Region {invalid_region} provided does not seem to be valid, valid ' \
-                        f'regions are {SECURITY_HUB_ACTIVE_REGIONS}.'
+        error_message = self.error_message.format(invalid_region=invalid_region,
+                                                  SECURITY_HUB_ACTIVE_REGIONS=SECURITY_HUB_ACTIVE_REGIONS)
         parsing_error_message = get_parsing_error_message(get_arguments, ['-z', 'DUMMY_ZONE_NAME'])
         del os.environ['AWS_LABELER_REGION']
         self.assertTrue(parsing_error_message == error_message)
 
 
-class TestOrganization(unittest.TestCase):
+class TestZone(unittest.TestCase):
     def setUp(self):
         """
         Test set up
@@ -137,6 +148,9 @@ class TestOrganization(unittest.TestCase):
                                           '--audit-zone-name/-z --single-account-id/-s is required')
         self.mutually_exclusive_arguments_message = ('arguments --organizations-zone-name/-o --audit-zone-name/-z '
                                                      '--single-account-id/-s are mutually exclusive')
+
+
+class TestOrganization(TestZone):
 
     def test_missing_organization_name(self):
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1'])
@@ -193,18 +207,8 @@ class TestOrganization(unittest.TestCase):
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
 
-class TestAuditZone(unittest.TestCase):
+class TestAuditZone(TestZone):
 
-    def setUp(self):
-        """
-        Test set up
-
-        This is where you can setup things that you use throughout the tests. This method is called before every test.
-        """
-        self.missing_arguments_message = ('one of the arguments --organizations-zone-name/-o '
-                                          '--audit-zone-name/-z --single-account-id/-s is required')
-        self.mutually_exclusive_arguments_message = ('arguments --organizations-zone-name/-o --audit-zone-name/-z '
-                                                     '--single-account-id/-s are mutually exclusive')
     def test_missing_audit_zone_name(self):
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1'])
         self.assertTrue(parsing_error_message == self.missing_arguments_message)
@@ -241,18 +245,8 @@ class TestAuditZone(unittest.TestCase):
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
 
-class TestSingleAccount(unittest.TestCase):
+class TestSingleAccount(TestZone):
 
-    def setUp(self):
-        """
-        Test set up
-
-        This is where you can setup things that you use throughout the tests. This method is called before every test.
-        """
-        self.missing_arguments_message = ('one of the arguments --organizations-zone-name/-o '
-                                          '--audit-zone-name/-z --single-account-id/-s is required')
-        self.mutually_exclusive_arguments_message = ('arguments --organizations-zone-name/-o --audit-zone-name/-z '
-                                                     '--single-account-id/-s are mutually exclusive')
     def test_missing_single_account(self):
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1'])
         self.assertTrue(parsing_error_message == self.missing_arguments_message)
@@ -281,3 +275,39 @@ class TestSingleAccount(unittest.TestCase):
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1', '-s', '123456789012'])
         del os.environ['AWS_LABELER_AUDIT_ZONE_NAME']
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+
+class TestFrameworks(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.error_message = ('{provided_frameworks} are not valid supported security hub frameworks. Currently '
+                              'supported are {frameworks}')
+
+    def test_empty_frameworks(self):
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG', '-f', ''])
+        self.assertTrue(args.frameworks == [])
+
+    def test_default_frameworks(self):
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG'])
+        self.assertTrue(args.frameworks == DEFAULT_SECURITY_HUB_FRAMEWORKS)
+
+    def test_invalid_frameworks(self):
+        frameworks = 'aws-foundational-security-best-practices,bob'
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-f', frameworks]
+        parser = get_parser()
+        error_frameworks = parser.parse_args(arguments).frameworks
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        error_message = self.error_message.format(provided_frameworks=error_frameworks,
+                                                  frameworks=SecurityHub.frameworks)
+        self.assertTrue(parsing_error_message == error_message)
+
+    def test_invalid_frameworks_as_env_var(self):
+        os.environ['AWS_LABELER_FRAMEWORKS'] = 'aws-foundational-security-best-practices,bob'
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+        parser = get_parser()
+        error_frameworks = parser.parse_args(arguments).frameworks
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        del os.environ['AWS_LABELER_FRAMEWORKS']
+        error_message = self.error_message.format(provided_frameworks=error_frameworks,
+                                                  frameworks=SecurityHub.frameworks)
+        self.assertTrue(parsing_error_message == error_message)

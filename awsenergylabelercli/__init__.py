@@ -33,6 +33,7 @@ Import all parts from awsenergylabelercli here
 """
 from ._version import __version__
 from .awsenergylabelercli import (get_arguments,
+                                  get_parser,
                                   setup_logging,
                                   get_zone_reporting_data,
                                   get_account_reporting_data)
@@ -50,6 +51,7 @@ __status__ = '''Development'''  # "Prototype", "Development", "Production".
 assert __version__
 
 assert get_arguments
+assert get_parser
 assert setup_logging
 assert get_zone_reporting_data
 assert get_account_reporting_data

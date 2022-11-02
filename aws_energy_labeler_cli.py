@@ -33,6 +33,7 @@ Main code for aws_energy_labeler_cli.
 
 import json
 import logging
+import sys
 
 from art import text2art
 from awsenergylabelerlib import DataExporter
@@ -98,7 +99,6 @@ def main():
     args = get_arguments()
     setup_logging(args.log_level, args.logger_config)
     logging.getLogger('botocore').setLevel(logging.ERROR)
-    print(args)
     try:
         print(text2art("AWS Energy Labeler"))
         report_data, exporter_arguments = _get_reporting_arguments(args)
