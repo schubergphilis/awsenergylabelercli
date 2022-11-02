@@ -63,9 +63,9 @@ from .validators import (aws_account_id,
                          environment_variable_boolean,
                          default_environment_variable,
                          get_mutually_exclusive_args,
+                         json_string,
                          positive_integer,
-                         security_hub_region
-                         )
+                         security_hub_region)
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -196,6 +196,16 @@ def get_parser():
                         default=environment_variable_boolean(os.environ.get('AWS_LABELER_REPORT_SUPPRESSED_FINDINGS',
                                                                             False)),
                         help='If set the report will contain info on the number of suppressed findings')
+    parser.add_argument('--account-thresholds',
+                        '-at',
+                        type=json_string,
+                        default=json_string(os.environ.get('AWS_LABELER_ACCOUNT_THRESHOLDS')),
+                        help='If set the account thresholds will be used instead of the default ones.')
+    parser.add_argument('--zone-thresholds',
+                        '-zt',
+                        type=json_string,
+                        default=json_string(os.environ.get('AWS_LABELER_ZONE_THRESHOLDS')),
+                        help='If set the zone thresholds will be used instead of the default ones.')
     parser.set_defaults(export_all=True)
     return parser
 

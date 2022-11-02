@@ -32,6 +32,7 @@ Main code for validators.
 """
 
 import argparse
+import json
 import logging
 import os
 import re
@@ -158,3 +159,25 @@ def default_environment_variable(variable_name):
             setattr(namespace, self.dest, values)
 
     return DefaultEnvVar
+
+
+def json_string(value):
+    """Validates that the provided argument is a valid json string.
+
+    Args:
+        value: The string to load as json
+
+    Returns:
+        The json object on success
+
+    Raises:
+        ArgumentTypeError on error.
+
+    """
+    if value is None:
+        return None
+    try:
+        json_value = json.loads(value)
+    except ValueError:
+        raise ArgumentTypeError(f'{value} is an invalid json string.') from None
+    return json_value
