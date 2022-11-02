@@ -381,3 +381,64 @@ class TestAccountIds(unittest.TestCase):
     def setUp(self) -> None:
         self.mutually_exclusive_arguments_message = ('argument --allowed-account-ids/-a: not allowed with argument '
                                                      '--denied-account-ids/-d')
+
+    def test_mutually_exclusive_account_id_arguments(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-a', '123456789012', '-d', '123456789012']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_allowed_account_ids_valid_as_argument(self):
+        valid_account_ids = ['123456789012', '234567890123']
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME', '-a', ','.join(valid_account_ids)])
+        self.assertTrue(args.allowed_account_ids == valid_account_ids)
+
+    def test_allowed_account_ids_valid_as_env_var(self):
+        valid_account_ids = ['123456789012', '234567890123']
+        os.environ['AWS_LABELER_ALLOWED_ACCOUNT_IDS'] = ','.join(valid_account_ids)
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME'])
+        del os.environ['AWS_LABELER_ALLOWED_ACCOUNT_IDS']
+        self.assertTrue(args.allowed_account_ids == valid_account_ids)
+
+    def test_allowed_account_ids_invalid_as_argument(self):
+        invalid_account_ids = ['a123456789012', '2345678s90123']
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME', '-a', ','.join(invalid_account_ids)]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        error_message = f'{invalid_account_ids} contains invalid account ids.'
+        self.assertTrue(parsing_error_message == error_message)
+
+    def test_allowed_account_ids_invalid_as_env_var(self):
+        invalid_account_ids = ['a123456789012', '2345678s90123']
+        os.environ['AWS_LABELER_ALLOWED_ACCOUNT_IDS'] = ','.join(invalid_account_ids)
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        del os.environ['AWS_LABELER_ALLOWED_ACCOUNT_IDS']
+        error_message = f'{invalid_account_ids} contains invalid account ids.'
+        self.assertTrue(parsing_error_message == error_message)
+
+    def test_denied_account_ids_valid_as_argument(self):
+        valid_account_ids = ['123456789012', '234567890123']
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME', '-d', ','.join(valid_account_ids)])
+        self.assertTrue(args.denied_account_ids == valid_account_ids)
+
+    def test_denied_account_ids_valid_as_env_var(self):
+        valid_account_ids = ['123456789012', '234567890123']
+        os.environ['AWS_LABELER_DENIED_ACCOUNT_IDS'] = ','.join(valid_account_ids)
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME'])
+        del os.environ['AWS_LABELER_DENIED_ACCOUNT_IDS']
+        self.assertTrue(args.denied_account_ids == valid_account_ids)
+
+    def test_denied_account_ids_invalid_as_argument(self):
+        invalid_account_ids = ['a123456789012', '2345678s90123']
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME', '-a', ','.join(invalid_account_ids)]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        error_message = f'{invalid_account_ids} contains invalid account ids.'
+        self.assertTrue(parsing_error_message == error_message)
+
+    def test_denied_account_ids_invalid_as_env_var(self):
+        invalid_account_ids = ['a123456789012', '2345678s90123']
+        os.environ['AWS_LABELER_DENIED_ACCOUNT_IDS'] = ','.join(invalid_account_ids)
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        del os.environ['AWS_LABELER_DENIED_ACCOUNT_IDS']
+        error_message = f'{invalid_account_ids} contains invalid account ids.'
+        self.assertTrue(parsing_error_message == error_message)

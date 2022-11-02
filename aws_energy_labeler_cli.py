@@ -99,6 +99,8 @@ def main():
     args = get_arguments()
     setup_logging(args.log_level, args.logger_config)
     logging.getLogger('botocore').setLevel(logging.ERROR)
+    print(args)
+    print(sys.argv)
     try:
         print(text2art("AWS Energy Labeler"))
         report_data, exporter_arguments = _get_reporting_arguments(args)
