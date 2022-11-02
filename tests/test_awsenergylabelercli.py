@@ -442,3 +442,66 @@ class TestAccountIds(unittest.TestCase):
         del os.environ['AWS_LABELER_DENIED_ACCOUNT_IDS']
         error_message = f'{invalid_account_ids} contains invalid account ids.'
         self.assertTrue(parsing_error_message == error_message)
+
+
+class TestRegions(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.mutually_exclusive_arguments_message = ('argument --allowed-regions/-ar: not allowed with argument '
+                                                     '--denied-regions/-dr')
+        self.valid_regions = ['eu-west-1', 'eu-central-1']
+        self.invalid_regions = ['eu-west-18', 'bobs-region']
+
+
+    def test_mutually_exclusive_region_arguments(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-ar', 'eu-west-1', '-dr', 'eu-central-1']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_allowed_regions_valid_as_argument(self):
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME', '-ar', ','.join(self.valid_regions)])
+        self.assertTrue(args.allowed_regions == self.valid_regions)
+
+    def test_allowed_regions_valid_as_env_var(self):
+        os.environ['AWS_LABELER_ALLOWED_REGIONS'] = ','.join(self.valid_regions)
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME'])
+        del os.environ['AWS_LABELER_ALLOWED_REGIONS']
+        self.assertTrue(args.allowed_regions == self.valid_regions)
+
+    def test_allowed_regions_invalid_as_argument(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME', '-ar', ','.join(self.invalid_regions)]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        error_message = f'{self.invalid_regions} contains invalid regions.'
+        self.assertTrue(parsing_error_message == error_message)
+
+    def test_allowed_regions_invalid_as_env_var(self):
+        os.environ['AWS_LABELER_ALLOWED_REGIONS'] = ','.join(self.invalid_regions)
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        del os.environ['AWS_LABELER_ALLOWED_REGIONS']
+        error_message = f'{self.invalid_regions} contains invalid regions.'
+        self.assertTrue(parsing_error_message == error_message)
+
+    def test_denied_regions_valid_as_argument(self):
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME', '-dr', ','.join(self.valid_regions)])
+        self.assertTrue(args.denied_regions == self.valid_regions)
+
+    def test_denied_regions_valid_as_env_var(self):
+        os.environ['AWS_LABELER_DENIED_REGIONS'] = ','.join(self.valid_regions)
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME'])
+        del os.environ['AWS_LABELER_DENIED_REGIONS']
+        self.assertTrue(args.denied_regions == self.valid_regions)
+
+    def test_denied_regions_invalid_as_argument(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME', '-dr', ','.join(self.invalid_regions)]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        error_message = f'{self.invalid_regions} contains invalid regions.'
+        self.assertTrue(parsing_error_message == error_message)
+
+    def test_denied_regions_invalid_as_env_var(self):
+        os.environ['AWS_LABELER_DENIED_REGIONS'] = ','.join(self.invalid_regions)
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        del os.environ['AWS_LABELER_DENIED_REGIONS']
+        error_message = f'{self.invalid_regions} contains invalid regions.'
+        self.assertTrue(parsing_error_message == error_message)
