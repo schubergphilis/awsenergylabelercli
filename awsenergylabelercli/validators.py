@@ -77,7 +77,6 @@ def security_hub_region(region):
 
 def character_delimited_list_variable(value):
     """Support for environment variables with characters delimiting a list of value."""
-    print(value)
     delimiting_characters = '[,|\\s]'
     result = [entry for entry in re.split(delimiting_characters, str(value)) if entry]
     if len(result) == 1:

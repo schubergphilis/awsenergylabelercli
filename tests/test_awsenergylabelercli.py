@@ -33,6 +33,7 @@ Tests for `awsenergylabelercli` module.
 
 """
 
+import argparse
 import contextlib
 import io
 import os
@@ -40,6 +41,11 @@ import sys
 import unittest
 
 from awsenergylabelercli import get_arguments, get_parser
+from awsenergylabelercli.validators import (character_delimited_list_variable,
+                                            environment_variable_boolean,
+                                            positive_integer,
+                                            json_string,
+                                            aws_account_id)
 from awsenergylabelerlib import SECURITY_HUB_ACTIVE_REGIONS, DEFAULT_SECURITY_HUB_FRAMEWORKS, SecurityHub
 
 
@@ -92,6 +98,63 @@ class TestAwsenergylabelercli(unittest.TestCase):
         This is where you should tear down what you've setup in setUp before. This method is called after every test.
         """
         pass
+
+
+class TestValidators(unittest.TestCase):
+
+    def test_character_delimited_list_variable_pipe_character(self):
+        values = 'alice|bob|jack'
+        self.assertTrue(character_delimited_list_variable(values) == ['alice', 'bob', 'jack'])
+
+    def test_character_delimited_list_variable_comma_character(self):
+        values = 'alice,bob,jack'
+        self.assertTrue(character_delimited_list_variable(values) == ['alice', 'bob', 'jack'])
+
+    def test_character_delimited_list_variable_space_character(self):
+        values = 'alice bob jack'
+        self.assertTrue(character_delimited_list_variable(values) == ['alice', 'bob', 'jack'])
+
+    def test_character_delimited_list_variable_mixed_characters(self):
+        values = 'alice,bob|jack more'
+        self.assertTrue(character_delimited_list_variable(values) == ['alice', 'bob', 'jack', 'more'])
+
+    def test_character_delimited_list_single_value(self):
+        values = 'alice'
+        self.assertTrue(character_delimited_list_variable(values) == 'alice')
+
+    def test_environment_variable_boolean_true_values(self):
+        for value in ['t', 'T', 'true', 'True', 1, '1', 'TRUE']:
+            self.assertTrue(environment_variable_boolean(value))
+
+    def test_environment_variable_boolean_false_values(self):
+        for value in ['f', 'TruE', 'garbage']:
+            self.assertFalse(environment_variable_boolean(value))
+
+    def test_positive_integer_none_value(self):
+        self.assertIsNone(positive_integer(None))
+
+    def test_positive_integer_valid_values(self):
+        self.assertTrue(positive_integer('1') == 1)
+        self.assertTrue(positive_integer(1) == 1)
+        self.assertTrue(positive_integer('14') == 14)
+
+    def test_positive_integer_invalid_value(self):
+        self.assertRaises(argparse.ArgumentTypeError, positive_integer, 'a')
+        self.assertRaises(argparse.ArgumentTypeError, positive_integer, '-5')
+        self.assertRaises(argparse.ArgumentTypeError, positive_integer, -2)
+
+    def test_json_string_none_value(self):
+        self.assertIsNone(json_string(None))
+
+    def test_json_string_valid_values(self):
+        self.assertTrue(json_string('{"a": 1}') == {'a': 1})
+        self.assertTrue(json_string('{"a": ["f", "a"], "b": {"a": 3}}') == {'a': ['f', 'a'], 'b': {'a': 3}})
+
+    def test_json_string_invalid_values(self):
+        self.assertRaises(argparse.ArgumentTypeError, json_string, 'adfad')
+
+    def test_aws_account_id(self):
+        self.assertRaises(argparse.ArgumentTypeError, aws_account_id, 'adfad')
 
 
 class TestRegion(unittest.TestCase):
@@ -311,3 +374,10 @@ class TestFrameworks(unittest.TestCase):
         error_message = self.error_message.format(provided_frameworks=error_frameworks,
                                                   frameworks=SecurityHub.frameworks)
         self.assertTrue(parsing_error_message == error_message)
+
+
+class TestAccountIds(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.mutually_exclusive_arguments_message = ('argument --allowed-account-ids/-a: not allowed with argument '
+                                                     '--denied-account-ids/-d')
