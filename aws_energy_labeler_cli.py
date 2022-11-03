@@ -33,7 +33,6 @@ Main code for aws_energy_labeler_cli.
 
 import json
 import logging
-import sys
 
 from art import text2art
 from terminaltables import AsciiTable
@@ -66,6 +65,11 @@ def _get_reporting_arguments(args):
                         'allowed_regions': args.allowed_regions,
                         'denied_regions': args.denied_regions,
                         'export_all_data_flag': args.export_all,
+                        'report_metadata': args.report_metadata,
+                        'report_closed_findings_days': args.report_closed_findings_days,
+                        'report_suppressed_findings': args.report_suppressed_findings,
+                        'account_thresholds': args.account_thresholds,
+                        'security_hub_query_filter': args.security_hub_query_filter,
                         'log_level': args.log_level}
     if args.single_account_id:
         get_reporting_data = get_account_reporting_data
@@ -77,7 +81,8 @@ def _get_reporting_arguments(args):
         method_arguments.update({'zone_name': zone_name,
                                  'allowed_account_ids': args.allowed_account_ids,
                                  'denied_account_ids': args.denied_account_ids,
-                                 'zone_type': zone_type})
+                                 'zone_type': zone_type,
+                                 'zone_thresholds': args.zone_thresholds})
     return get_reporting_data(**method_arguments)
 
 
@@ -99,8 +104,14 @@ def main():
     args = get_arguments()
     setup_logging(args.log_level, args.logger_config)
     logging.getLogger('botocore').setLevel(logging.ERROR)
-    print(args)
-    print(sys.argv)
+    for entity in ['account', 'zone']:
+        if getattr(args, f'{entity}_thresholds'):
+            LOGGER.warning(f'{entity.capitalize()} thresholds have been overwritten, '
+                           f'configuration will be reported on the output.')
+    if not args.frameworks:
+        LOGGER.info('No frameworks have been provided for filtering.')
+    # print(args)
+    # print(sys.argv)
     try:
         print(text2art("AWS Energy Labeler"))
         report_data, exporter_arguments = _get_reporting_arguments(args)
@@ -109,11 +120,12 @@ def main():
             exporter = DataExporter(**exporter_arguments)
             exporter.export(args.export_path)
         report(report_data, args.to_json)
-    except Exception as msg:
+        status_code = 0
+    except Exception as msg:  # pylint: disable=broad-except
         LOGGER.error(msg)
-        raise SystemExit(1)
-    raise SystemExit(0)
+        status_code = 1
+    return status_code
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

@@ -65,6 +65,7 @@ from .validators import (account_thresholds_config,
                          environment_variable_boolean,
                          default_environment_variable,
                          get_mutually_exclusive_args,
+                         json_string,
                          positive_integer,
                          security_hub_region,
                          zone_thresholds_config)
@@ -208,6 +209,12 @@ def get_parser():
                         type=zone_thresholds_config,
                         default=os.environ.get('AWS_LABELER_ZONE_THRESHOLDS'),
                         help='If set the zone thresholds will be used instead of the default ones.')
+    parser.add_argument('--security-hub-query-filter',
+                        '-sf',
+                        type=json_string,
+                        default=os.environ.get('AWS_LABELER_SECURITY_HUB_QUERY_FILTER'),
+                        help='If set the zone thresholds will be used instead of the default ones.')
+
     parser.set_defaults(export_all=True)
     return parser
 
@@ -315,7 +322,7 @@ def wait_for_findings(method_name, method_argument, log_level):
     return findings
 
 
-#  pylint: disable=too-many-arguments
+#  pylint: disable=too-many-arguments,too-many-locals
 def get_zone_reporting_data(zone_name,
                             region,
                             frameworks,
@@ -324,6 +331,12 @@ def get_zone_reporting_data(zone_name,
                             allowed_regions,
                             denied_regions,
                             export_all_data_flag,
+                            report_metadata,  # pylint: disable=unused-argument
+                            report_closed_findings_days,  # pylint: disable=unused-argument
+                            report_suppressed_findings,  # pylint: disable=unused-argument
+                            account_thresholds,
+                            zone_thresholds,
+                            security_hub_query_filter,
                             log_level,
                             zone_type):
     """Gets the reporting data for an organizations zone.
@@ -337,6 +350,11 @@ def get_zone_reporting_data(zone_name,
         allowed_regions: The allowed regions for security hub if any.
         denied_regions: The denied regions for security hub if any.
         export_all_data_flag: If set all data is going to be exported, else only basic reporting.
+        report_metadata:
+        report_closed_findings_days:
+        report_suppressed_findings:
+        account_thresholds:
+        zone_thresholds:
         log_level: The log level set.
         zone_type: The type of zone to label.
 
@@ -344,11 +362,14 @@ def get_zone_reporting_data(zone_name,
         report_data, exporter_arguments
 
     """
+    # report_metadata,
+    # report_closed_findings_days,
+    # report_suppressed_findings,
     labeler = EnergyLabeler(zone_name=zone_name,
                             region=region,
-                            account_thresholds=ACCOUNT_THRESHOLDS,
-                            zone_thresholds=ZONE_THRESHOLDS,
-                            security_hub_filter=DEFAULT_SECURITY_HUB_FILTER,
+                            account_thresholds=account_thresholds or ACCOUNT_THRESHOLDS,
+                            zone_thresholds=zone_thresholds or ZONE_THRESHOLDS,
+                            security_hub_filter=security_hub_query_filter or DEFAULT_SECURITY_HUB_FILTER,
                             frameworks=frameworks,
                             allowed_account_ids=allowed_account_ids,
                             denied_account_ids=denied_account_ids,
@@ -372,13 +393,18 @@ def get_zone_reporting_data(zone_name,
     return report_data, exporter_arguments
 
 
-#  pylint: disable=too-many-arguments
+#  pylint: disable=too-many-arguments,too-many-locals
 def get_account_reporting_data(account_id,
                                region,
                                frameworks,
                                allowed_regions,
                                denied_regions,
                                export_all_data_flag,
+                               report_metadata,  # pylint: disable=unused-argument
+                               report_closed_findings_days,  # pylint: disable=unused-argument
+                               report_suppressed_findings,  # pylint: disable=unused-argument
+                               account_thresholds,
+                               security_hub_query_filter,
                                log_level):
     """Gets the reporting data for a single account.
 
@@ -389,17 +415,24 @@ def get_account_reporting_data(account_id,
         allowed_regions: The allowed regions for security hub if any.
         denied_regions: The denied regions for security hub if any.
         export_all_data_flag: If set all data is going to be exported, else only basic reporting.
+        report_metadata:
+        report_closed_findings_days:
+        report_suppressed_findings:
+        account_thresholds:
         log_level: The log level set.
 
     Returns:
         report_data, exporter_arguments
 
     """
-    account = AwsAccount(account_id, 'Not Retrieved', ACCOUNT_THRESHOLDS)
+    # report_metadata,
+    # report_closed_findings_days,
+    # report_suppressed_findings,
+    account = AwsAccount(account_id, 'Not Retrieved', account_thresholds or ACCOUNT_THRESHOLDS)
     security_hub = SecurityHub(region=region,
                                allowed_regions=allowed_regions,
                                denied_regions=denied_regions)
-    query_filter = SecurityHub.calculate_query_filter(DEFAULT_SECURITY_HUB_FILTER,
+    query_filter = SecurityHub.calculate_query_filter(security_hub_query_filter or DEFAULT_SECURITY_HUB_FILTER,
                                                       allowed_account_ids=[account_id],
                                                       denied_account_ids=None,
                                                       frameworks=frameworks)

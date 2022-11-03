@@ -750,6 +750,7 @@ class TestThresholdsArgs(unittest.TestCase):
     def test_valid_json_account_thresholds_env_var_provided(self):
         os.environ['AWS_LABELER_ACCOUNT_THRESHOLDS'] = self.valid_account_thresholds
         args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
+        del os.environ['AWS_LABELER_ACCOUNT_THRESHOLDS']
         self.assertTrue(args.account_thresholds == ACCOUNT_THRESHOLDS)
 
     def test_invalid_account_thresholds_env_var_provided(self):
@@ -787,6 +788,7 @@ class TestThresholdsArgs(unittest.TestCase):
     def test_valid_json_zone_thresholds_env_var_provided(self):
         os.environ['AWS_LABELER_ZONE_THRESHOLDS'] = self.valid_zone_thresholds
         args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
+        del os.environ['AWS_LABELER_ZONE_THRESHOLDS']
         self.assertTrue(args.zone_thresholds == ZONE_THRESHOLDS)
 
     def test_invalid_zone_thresholds_env_var_provided(self):
@@ -796,3 +798,33 @@ class TestThresholdsArgs(unittest.TestCase):
         self.assertTrue(parsing_error_message == self.invalid_zone_thresholds_message.format(
             value=self.valid_json_string))
 
+class TestSecurityHubQueryFilterArgs(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.invalid_json_string = '"sddf'
+        self.valid_json_string = '"{}"'
+        self.invalid_query_json_message = 'argument --security-hub-filter/-sf: {value} is an invalid json string.'
+
+    def test_valid_json_query_filter_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-sf', self.valid_json_string]
+        args = get_arguments(arguments)
+        self.assertTrue(args.security_hub_filter == json.loads(self.valid_json_string))
+
+    def test_invalid_json_query_filter_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-sf', self.invalid_json_string]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.invalid_query_json_message.format(
+            value=self.invalid_json_string))
+
+    def test_valid_json_query_filter_env_var_provided(self):
+        os.environ['AWS_LABELER_SECURITY_HUB_QUERY_FILTER'] = self.valid_json_string
+        args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
+        del os.environ['AWS_LABELER_SECURITY_HUB_QUERY_FILTER']
+        self.assertTrue(args.security_hub_filter == json.loads(self.valid_json_string))
+
+    def test_invalid_zone_thresholds_env_var_provided(self):
+        os.environ['AWS_LABELER_SECURITY_HUB_QUERY_FILTER'] = self.invalid_json_string
+        parsing_error_message = get_parsing_error_message(get_arguments, MINIMUM_REQUIRED_ARGUMENTS)
+        del os.environ['AWS_LABELER_SECURITY_HUB_QUERY_FILTER']
+        self.assertTrue(parsing_error_message == self.invalid_query_json_message.format(
+            value=self.invalid_json_string))
