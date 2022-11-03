@@ -36,6 +36,7 @@ Tests for `awsenergylabelercli` module.
 import argparse
 import contextlib
 import io
+import json
 import os
 import sys
 import unittest
@@ -46,7 +47,11 @@ from awsenergylabelercli.validators import (character_delimited_list_variable,
                                             positive_integer,
                                             json_string,
                                             aws_account_id)
-from awsenergylabelerlib import SECURITY_HUB_ACTIVE_REGIONS, DEFAULT_SECURITY_HUB_FRAMEWORKS, SecurityHub
+from awsenergylabelerlib import (SECURITY_HUB_ACTIVE_REGIONS,
+                                 DEFAULT_SECURITY_HUB_FRAMEWORKS,
+                                 SecurityHub,
+                                 ACCOUNT_THRESHOLDS,
+                                 ZONE_THRESHOLDS)
 
 
 @contextlib.contextmanager
@@ -702,3 +707,92 @@ class TestReportingArgs(unittest.TestCase):
             args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
             self.assertFalse(args.report_suppressed_findings)
             del os.environ['AWS_LABELER_REPORT_SUPPRESSED_FINDINGS']
+
+
+class TestThresholdsArgs(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.invalid_json_string = '"sddf'
+        self.valid_json_string = '"{}"'
+        self.invalid_account_json_message = 'argument --account-thresholds/-at: {value} is an invalid json string.'
+        self.invalid_account_thresholds_message = 'argument --account-thresholds/-at: Provided configuration {value} ' \
+                                                  'is an invalid accounts thresholds configuration.'
+        self.valid_account_thresholds = json.dumps(ACCOUNT_THRESHOLDS)
+        self.invalid_zone_json_message = 'argument --zone-thresholds/-zt: {value} is an invalid json string.'
+        self.invalid_zone_thresholds_message = 'argument --zone-thresholds/-zt: Provided configuration {value} ' \
+                                               'is an invalid zone thresholds configuration.'
+        self.valid_zone_thresholds = json.dumps(ZONE_THRESHOLDS)
+
+    def test_invalid_json_account_thresholds_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-at', self.invalid_json_string]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.invalid_account_json_message.format(
+            value=self.invalid_json_string))
+
+    def test_valid_json_account_thresholds_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-at', self.valid_account_thresholds]
+        args = get_arguments(arguments)
+        self.assertTrue(args.account_thresholds == ACCOUNT_THRESHOLDS)
+
+    def test_invalid_account_thresholds_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-at', self.valid_json_string]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.invalid_account_thresholds_message.format(
+            value=self.valid_json_string))
+
+    def test_invalid_json_account_thresholds_env_var_provided(self):
+        os.environ['AWS_LABELER_ACCOUNT_THRESHOLDS'] = self.invalid_json_string
+        parsing_error_message = get_parsing_error_message(get_arguments, MINIMUM_REQUIRED_ARGUMENTS)
+        del os.environ['AWS_LABELER_ACCOUNT_THRESHOLDS']
+        self.assertTrue(parsing_error_message == self.invalid_account_json_message.format(
+            value=self.invalid_json_string))
+
+    def test_valid_json_account_thresholds_env_var_provided(self):
+        os.environ['AWS_LABELER_ACCOUNT_THRESHOLDS'] = self.valid_account_thresholds
+        args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
+        self.assertTrue(args.account_thresholds == ACCOUNT_THRESHOLDS)
+
+    def test_invalid_account_thresholds_env_var_provided(self):
+        os.environ['AWS_LABELER_ACCOUNT_THRESHOLDS'] = self.valid_json_string
+        parsing_error_message = get_parsing_error_message(get_arguments, MINIMUM_REQUIRED_ARGUMENTS)
+        del os.environ['AWS_LABELER_ACCOUNT_THRESHOLDS']
+        self.assertTrue(parsing_error_message == self.invalid_account_thresholds_message.format(
+            value=self.valid_json_string))
+
+####
+    def test_invalid_json_zone_thresholds_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-zt', self.invalid_json_string]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.invalid_zone_json_message.format(
+            value=self.invalid_json_string))
+
+    def test_valid_json_zone_thresholds_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-zt', self.valid_zone_thresholds]
+        args = get_arguments(arguments)
+        self.assertTrue(args.zone_thresholds == ZONE_THRESHOLDS)
+
+    def test_invalid_zone_thresholds_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-zt', self.valid_json_string]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.invalid_zone_thresholds_message.format(
+            value=self.valid_json_string))
+
+    def test_invalid_json_zone_thresholds_env_var_provided(self):
+        os.environ['AWS_LABELER_ZONE_THRESHOLDS'] = self.invalid_json_string
+        parsing_error_message = get_parsing_error_message(get_arguments, MINIMUM_REQUIRED_ARGUMENTS)
+        del os.environ['AWS_LABELER_ZONE_THRESHOLDS']
+        self.assertTrue(parsing_error_message == self.invalid_zone_json_message.format(
+            value=self.invalid_json_string))
+
+    def test_valid_json_zone_thresholds_env_var_provided(self):
+        os.environ['AWS_LABELER_ZONE_THRESHOLDS'] = self.valid_zone_thresholds
+        args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
+        self.assertTrue(args.zone_thresholds == ZONE_THRESHOLDS)
+
+    def test_invalid_zone_thresholds_env_var_provided(self):
+        os.environ['AWS_LABELER_ZONE_THRESHOLDS'] = self.valid_json_string
+        parsing_error_message = get_parsing_error_message(get_arguments, MINIMUM_REQUIRED_ARGUMENTS)
+        del os.environ['AWS_LABELER_ZONE_THRESHOLDS']
+        self.assertTrue(parsing_error_message == self.invalid_zone_thresholds_message.format(
+            value=self.valid_json_string))
+
