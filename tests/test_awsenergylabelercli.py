@@ -80,6 +80,8 @@ __maintainer__ = '''Theodoor Scholte'''
 __email__ = '''<tscholte@schubergphilis.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
+MINIMUM_REQUIRED_ARGUMENTS = ['-r', 'eu-west-1', '-o', 'ORG']
+
 
 class TestAwsenergylabelercli(unittest.TestCase):
 
@@ -358,7 +360,7 @@ class TestFrameworks(unittest.TestCase):
         self.assertTrue(args.frameworks == [])
 
     def test_default_frameworks(self):
-        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG'])
+        args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
         self.assertTrue(args.frameworks == DEFAULT_SECURITY_HUB_FRAMEWORKS)
 
     def test_invalid_frameworks(self):
@@ -373,10 +375,9 @@ class TestFrameworks(unittest.TestCase):
 
     def test_invalid_frameworks_as_env_var(self):
         os.environ['AWS_LABELER_FRAMEWORKS'] = 'aws-foundational-security-best-practices,bob'
-        arguments = ['-r', 'eu-west-1', '-o', 'ORG']
         parser = get_parser()
-        error_frameworks = parser.parse_args(arguments).frameworks
-        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        error_frameworks = parser.parse_args(MINIMUM_REQUIRED_ARGUMENTS).frameworks
+        parsing_error_message = get_parsing_error_message(get_arguments, MINIMUM_REQUIRED_ARGUMENTS)
         del os.environ['AWS_LABELER_FRAMEWORKS']
         error_message = self.error_message.format(provided_frameworks=error_frameworks,
                                                   frameworks=SecurityHub.frameworks)
@@ -532,8 +533,7 @@ class TestExportArgs(unittest.TestCase):
     def test_export_valid_local_path_env_var_provided(self):
         for local_path in self.valid_local_paths:
             os.environ['AWS_LABELER_EXPORT_PATH'] = local_path
-            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
-            args = get_arguments(arguments)
+            args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
             self.assertTrue(args.export_path == local_path)
             del os.environ['AWS_LABELER_EXPORT_PATH']
 
@@ -548,8 +548,7 @@ class TestExportArgs(unittest.TestCase):
     def test_export_invalid_local_path_env_var_provided(self):
         for local_path in self.invalid_local_paths:
             os.environ['AWS_LABELER_EXPORT_PATH'] = local_path
-            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
-            parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+            parsing_error_message = get_parsing_error_message(get_arguments, MINIMUM_REQUIRED_ARGUMENTS)
             error_message = f'{local_path} is an invalid export location. Example --export-path /a/directory or ' \
                             f'--export-path s3://mybucket location'
             self.assertTrue(parsing_error_message == error_message)
@@ -564,8 +563,7 @@ class TestExportArgs(unittest.TestCase):
     def test_export_valid_s3_path_env_var_provided(self):
         for s3_path in self.valid_s3_paths:
             os.environ['AWS_LABELER_EXPORT_PATH'] = s3_path
-            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
-            args = get_arguments(arguments)
+            args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
             self.assertTrue(args.export_path == s3_path)
             del os.environ['AWS_LABELER_EXPORT_PATH']
 
@@ -580,8 +578,7 @@ class TestExportArgs(unittest.TestCase):
     def test_export_invalid_s3_path_env_var_provided(self):
         for s3_path in self.invalid_s3_paths:
             os.environ['AWS_LABELER_EXPORT_PATH'] = s3_path
-            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
-            parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+            parsing_error_message = get_parsing_error_message(get_arguments, MINIMUM_REQUIRED_ARGUMENTS)
             error_message = f'{s3_path} is an invalid export location. Example --export-path /a/directory or ' \
                             f'--export-path s3://mybucket location'
             self.assertTrue(parsing_error_message == error_message)
@@ -595,22 +592,19 @@ class TestExportArgs(unittest.TestCase):
     def test_export_valid_metrics_only_env_var_provided(self):
         for value in ['t', 'T', 'true', 'True', '1', 'TRUE']:
             os.environ['AWS_LABELER_EXPORT_ONLY_METRICS'] = value
-            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
-            args = get_arguments(arguments)
+            args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
             self.assertFalse(args.export_all)
             del os.environ['AWS_LABELER_EXPORT_ONLY_METRICS']
 
     def test_export_invalid_metrics_only_env_var_provided(self):
         for value in ['TrUe', 'bob', 'garbage']:
             os.environ['AWS_LABELER_EXPORT_ONLY_METRICS'] = value
-            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
-            args = get_arguments(arguments)
+            args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
             self.assertTrue(args.export_all)
             del os.environ['AWS_LABELER_EXPORT_ONLY_METRICS']
 
     def test_export_to_json_argument_not_provided(self):
-        arguments = ['-r', 'eu-west-1', '-o', 'ORG']
-        args = get_arguments(arguments)
+        args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
         self.assertFalse(args.to_json)
 
     def test_export_to_json_argument_provided(self):
@@ -621,16 +615,14 @@ class TestExportArgs(unittest.TestCase):
     def test_export_valid_to_json_env_var_provided(self):
         for value in ['t', 'T', 'true', 'True', '1', 'TRUE']:
             os.environ['AWS_LABELER_TO_JSON'] = value
-            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
-            args = get_arguments(arguments)
+            args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
             self.assertTrue(args.to_json)
             del os.environ['AWS_LABELER_TO_JSON']
 
     def test_export_invalid_to_json_env_var_provided(self):
         for value in ['TrUe', 'bob', 'garbage']:
             os.environ['AWS_LABELER_TO_JSON'] = value
-            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
-            args = get_arguments(arguments)
+            args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
             self.assertFalse(args.to_json)
             del os.environ['AWS_LABELER_TO_JSON']
 
@@ -638,8 +630,7 @@ class TestExportArgs(unittest.TestCase):
 class TestReportingArgs(unittest.TestCase):
 
     def test_report_metadata_argument_not_provided(self):
-        arguments = ['-r', 'eu-west-1', '-o', 'ORG']
-        args = get_arguments(arguments)
+        args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
         self.assertFalse(args.report_metadata)
 
     def test_report_metadata_argument_provided(self):
@@ -650,16 +641,14 @@ class TestReportingArgs(unittest.TestCase):
     def test_valid_report_metadata_env_var_provided(self):
         for value in ['t', 'T', 'true', 'True', '1', 'TRUE']:
             os.environ['AWS_LABELER_REPORT_METADATA'] = value
-            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
-            args = get_arguments(arguments)
+            args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
             self.assertTrue(args.report_metadata)
             del os.environ['AWS_LABELER_REPORT_METADATA']
 
     def test_invalid_report_metadata_env_var_provided(self):
         for value in ['TrUe', 'bob', 'garbage']:
             os.environ['AWS_LABELER_REPORT_METADATA'] = value
-            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
-            args = get_arguments(arguments)
+            args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
             self.assertFalse(args.report_metadata)
             del os.environ['AWS_LABELER_REPORT_METADATA']
 
@@ -678,17 +667,38 @@ class TestReportingArgs(unittest.TestCase):
 
     def test_valid_report_closed_findings_days_env_var_provided(self):
         for days in [5, '6', '100', 3 * 5]:
-            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
             os.environ['AWS_LABELER_REPORT_CLOSED_FINDINGS_DAYS'] = str(days)
-            args = get_arguments(arguments)
+            args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
             self.assertTrue(args.report_closed_findings_days == int(days))
             del os.environ['AWS_LABELER_REPORT_CLOSED_FINDINGS_DAYS']
 
     def test_invalid_report_closed_findings_days_argument_provided(self):
         error_message = 'argument --report-closed-findings-days/-rd: {value} is an invalid positive int value'
         for value in ['a', -1, 'garbage']:
-            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
             os.environ['AWS_LABELER_REPORT_CLOSED_FINDINGS_DAYS'] = str(value)
-            parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+            parsing_error_message = get_parsing_error_message(get_arguments, MINIMUM_REQUIRED_ARGUMENTS)
             self.assertTrue(parsing_error_message == error_message.format(value=value))
             del os.environ['AWS_LABELER_REPORT_CLOSED_FINDINGS_DAYS']
+
+    def test_report_suppressed_findings_argument_not_provided(self):
+        args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
+        self.assertFalse(args.report_suppressed_findings)
+
+    def test_report_suppressed_findings_argument_provided(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-rs']
+        args = get_arguments(arguments)
+        self.assertTrue(args.report_suppressed_findings)
+
+    def test_report_suppressed_findings_env_var_provided(self):
+        for value in ['t', 'T', 'true', 'True', '1', 'TRUE']:
+            os.environ['AWS_LABELER_REPORT_SUPPRESSED_FINDINGS'] = value
+            args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
+            self.assertTrue(args.report_suppressed_findings)
+            del os.environ['AWS_LABELER_REPORT_SUPPRESSED_FINDINGS']
+
+    def test_report_suppressed_findings_invalid_env_var_provided(self):
+        for value in ['TrUe', 'bob', 'garbage']:
+            os.environ['AWS_LABELER_REPORT_SUPPRESSED_FINDINGS'] = value
+            args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
+            self.assertFalse(args.report_suppressed_findings)
+            del os.environ['AWS_LABELER_REPORT_SUPPRESSED_FINDINGS']
