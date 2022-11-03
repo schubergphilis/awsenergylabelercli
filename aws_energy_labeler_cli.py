@@ -36,8 +36,8 @@ import logging
 import sys
 
 from art import text2art
-from awsenergylabelerlib import DataExporter
 from terminaltables import AsciiTable
+from awsenergylabelerlib import DataExporter
 
 from awsenergylabelercli import (get_arguments,
                                  setup_logging,

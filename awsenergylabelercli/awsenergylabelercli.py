@@ -38,6 +38,8 @@ import logging.config
 import os
 
 import coloredlogs
+
+from yaspin import yaspin
 from awsenergylabelerlib import (validate_regions,
                                  validate_account_ids,
                                  AwsAccount,
@@ -55,7 +57,6 @@ from awsenergylabelerlib import (validate_regions,
                                  InvalidFrameworks,
                                  InvalidAccountListProvided,
                                  InvalidRegionListProvided)
-from yaspin import yaspin
 
 from .awsenergylabelercliexceptions import MissingRequiredArguments, MutuallyExclusiveArguments
 from .validators import (account_thresholds_config,

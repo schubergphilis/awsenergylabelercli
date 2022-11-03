@@ -37,8 +37,8 @@ import logging
 import os
 import re
 from argparse import ArgumentTypeError
-from schema import SchemaUnexpectedTypeError
 
+from schema import SchemaUnexpectedTypeError
 from awsenergylabelerlib import (is_valid_account_id,
                                  is_valid_region,
                                  SECURITY_HUB_ACTIVE_REGIONS)
@@ -185,18 +185,38 @@ def json_string(value):
 
 
 def account_thresholds_config(value):
+    """Validates that the provided string value is an account thresholds configuration.
+
+    Args:
+        value: The value to  validate for an account thresholds configuration.
+
+    Returns:
+        A valid account configuration.
+
+    """
     config = json_string(value)
     try:
         config = account_thresholds_schema.validate(config)
     except SchemaUnexpectedTypeError:
-        raise ArgumentTypeError(f'Provided configuration {value} is an invalid accounts thresholds configuration.') from None
+        raise ArgumentTypeError(
+            f'Provided configuration {value} is an invalid accounts thresholds configuration.') from None
     return config
 
 
 def zone_thresholds_config(value):
+    """Validates that the provided string value is a zone thresholds configuration.
+
+    Args:
+        value: The value to  validate for a zone thresholds configuration.
+
+    Returns:
+        A valid zone configuration.
+
+    """
     config = json_string(value)
     try:
         config = zone_thresholds_schema.validate(config)
     except SchemaUnexpectedTypeError:
-        raise ArgumentTypeError(f'Provided configuration {value} is an invalid zone thresholds configuration.') from None
+        raise ArgumentTypeError(
+            f'Provided configuration {value} is an invalid zone thresholds configuration.') from None
     return config
