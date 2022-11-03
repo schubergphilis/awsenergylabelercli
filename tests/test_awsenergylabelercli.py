@@ -237,6 +237,13 @@ class TestOrganization(TestZone):
                                                                           '-z', 'ZONE_NAME'])
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
+    def test_mutually_exclusive_with_audit_zone_and_single_as_arguments(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '-o', 'ORG_NAME',
+                                                                          '-z', 'ZONE_NAME',
+                                                                          '-s', '123456789012'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
     def test_mutually_exclusive_with_single_account_both_as_arguments(self):
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
                                                                           '-o', 'ORG_NAME',
@@ -452,7 +459,6 @@ class TestRegions(unittest.TestCase):
         self.valid_regions = ['eu-west-1', 'eu-central-1']
         self.invalid_regions = ['eu-west-18', 'bobs-region']
 
-
     def test_mutually_exclusive_region_arguments(self):
         arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-ar', 'eu-west-1', '-dr', 'eu-central-1']
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
@@ -505,3 +511,184 @@ class TestRegions(unittest.TestCase):
         del os.environ['AWS_LABELER_DENIED_REGIONS']
         error_message = f'{self.invalid_regions} contains invalid regions.'
         self.assertTrue(parsing_error_message == error_message)
+
+
+class TestExportArgs(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.valid_local_paths = ['test', f'{os.sep}test', f'.{os.sep}test']
+        self.invalid_local_paths = ['s4://test', '//:/test', r'//\:\//test', 'html://test']
+        self.valid_s3_paths = ['s3://something/other', 's3://test']
+        self.invalid_s3_paths = ['s5:/something/other', 'https://test']
+        self.error_message = '{provided_path} is an invalid export location. Example --export-path /a/directory or ' \
+                             '--export-path s3://mybucket location'
+
+    def test_export_valid_local_path_argument_provided(self):
+        for local_path in self.valid_local_paths:
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-p', local_path]
+            args = get_arguments(arguments)
+            self.assertTrue(args.export_path == local_path)
+
+    def test_export_valid_local_path_env_var_provided(self):
+        for local_path in self.valid_local_paths:
+            os.environ['AWS_LABELER_EXPORT_PATH'] = local_path
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+            args = get_arguments(arguments)
+            self.assertTrue(args.export_path == local_path)
+            del os.environ['AWS_LABELER_EXPORT_PATH']
+
+    def test_export_invalid_local_path_argument_provided(self):
+        for local_path in self.invalid_local_paths:
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-p', local_path]
+            parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+            error_message = f'{local_path} is an invalid export location. Example --export-path /a/directory or ' \
+                            f'--export-path s3://mybucket location'
+            self.assertTrue(parsing_error_message == error_message)
+
+    def test_export_invalid_local_path_env_var_provided(self):
+        for local_path in self.invalid_local_paths:
+            os.environ['AWS_LABELER_EXPORT_PATH'] = local_path
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+            parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+            error_message = f'{local_path} is an invalid export location. Example --export-path /a/directory or ' \
+                            f'--export-path s3://mybucket location'
+            self.assertTrue(parsing_error_message == error_message)
+            del os.environ['AWS_LABELER_EXPORT_PATH']
+
+    def test_export_valid_s3_path_argument_provided(self):
+        for s3_path in self.valid_s3_paths:
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-p', s3_path]
+            args = get_arguments(arguments)
+            self.assertTrue(args.export_path == s3_path)
+
+    def test_export_valid_s3_path_env_var_provided(self):
+        for s3_path in self.valid_s3_paths:
+            os.environ['AWS_LABELER_EXPORT_PATH'] = s3_path
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+            args = get_arguments(arguments)
+            self.assertTrue(args.export_path == s3_path)
+            del os.environ['AWS_LABELER_EXPORT_PATH']
+
+    def test_export_invalid_s3_path_argument_provided(self):
+        for s3_path in self.invalid_s3_paths:
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-p', s3_path]
+            parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+            error_message = f'{s3_path} is an invalid export location. Example --export-path /a/directory or ' \
+                            f'--export-path s3://mybucket location'
+            self.assertTrue(parsing_error_message == error_message)
+
+    def test_export_invalid_s3_path_env_var_provided(self):
+        for s3_path in self.invalid_s3_paths:
+            os.environ['AWS_LABELER_EXPORT_PATH'] = s3_path
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+            parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+            error_message = f'{s3_path} is an invalid export location. Example --export-path /a/directory or ' \
+                            f'--export-path s3://mybucket location'
+            self.assertTrue(parsing_error_message == error_message)
+            del os.environ['AWS_LABELER_EXPORT_PATH']
+
+    def test_export_metrics_only_argument_provided(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-e']
+        args = get_arguments(arguments)
+        self.assertFalse(args.export_all)
+
+    def test_export_valid_metrics_only_env_var_provided(self):
+        for value in ['t', 'T', 'true', 'True', '1', 'TRUE']:
+            os.environ['AWS_LABELER_EXPORT_ONLY_METRICS'] = value
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+            args = get_arguments(arguments)
+            self.assertFalse(args.export_all)
+            del os.environ['AWS_LABELER_EXPORT_ONLY_METRICS']
+
+    def test_export_invalid_metrics_only_env_var_provided(self):
+        for value in ['TrUe', 'bob', 'garbage']:
+            os.environ['AWS_LABELER_EXPORT_ONLY_METRICS'] = value
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+            args = get_arguments(arguments)
+            self.assertTrue(args.export_all)
+            del os.environ['AWS_LABELER_EXPORT_ONLY_METRICS']
+
+    def test_export_to_json_argument_not_provided(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+        args = get_arguments(arguments)
+        self.assertFalse(args.to_json)
+
+    def test_export_to_json_argument_provided(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-j']
+        args = get_arguments(arguments)
+        self.assertTrue(args.to_json)
+
+    def test_export_valid_to_json_env_var_provided(self):
+        for value in ['t', 'T', 'true', 'True', '1', 'TRUE']:
+            os.environ['AWS_LABELER_TO_JSON'] = value
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+            args = get_arguments(arguments)
+            self.assertTrue(args.to_json)
+            del os.environ['AWS_LABELER_TO_JSON']
+
+    def test_export_invalid_to_json_env_var_provided(self):
+        for value in ['TrUe', 'bob', 'garbage']:
+            os.environ['AWS_LABELER_TO_JSON'] = value
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+            args = get_arguments(arguments)
+            self.assertFalse(args.to_json)
+            del os.environ['AWS_LABELER_TO_JSON']
+
+
+class TestReportingArgs(unittest.TestCase):
+
+    def test_report_metadata_argument_not_provided(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+        args = get_arguments(arguments)
+        self.assertFalse(args.report_metadata)
+
+    def test_report_metadata_argument_provided(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-m']
+        args = get_arguments(arguments)
+        self.assertTrue(args.report_metadata)
+
+    def test_valid_report_metadata_env_var_provided(self):
+        for value in ['t', 'T', 'true', 'True', '1', 'TRUE']:
+            os.environ['AWS_LABELER_REPORT_METADATA'] = value
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+            args = get_arguments(arguments)
+            self.assertTrue(args.report_metadata)
+            del os.environ['AWS_LABELER_REPORT_METADATA']
+
+    def test_invalid_report_metadata_env_var_provided(self):
+        for value in ['TrUe', 'bob', 'garbage']:
+            os.environ['AWS_LABELER_REPORT_METADATA'] = value
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+            args = get_arguments(arguments)
+            self.assertFalse(args.report_metadata)
+            del os.environ['AWS_LABELER_REPORT_METADATA']
+
+    def test_valid_report_closed_findings_days_argument_provided(self):
+        for days in [5, '6', '100', 3 * 5]:
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-rd', str(days)]
+            args = get_arguments(arguments)
+            self.assertTrue(args.report_closed_findings_days == int(days))
+
+    def test_invalid_report_closed_findings_days_argument_provided(self):
+        error_message = 'argument --report-closed-findings-days/-rd: {value} is an invalid positive int value'
+        for value in ['a', -1, 'garbage']:
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-rd', str(value)]
+            parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+            self.assertTrue(parsing_error_message == error_message.format(value=value))
+
+    def test_valid_report_closed_findings_days_env_var_provided(self):
+        for days in [5, '6', '100', 3 * 5]:
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+            os.environ['AWS_LABELER_REPORT_CLOSED_FINDINGS_DAYS'] = str(days)
+            args = get_arguments(arguments)
+            self.assertTrue(args.report_closed_findings_days == int(days))
+            del os.environ['AWS_LABELER_REPORT_CLOSED_FINDINGS_DAYS']
+
+    def test_invalid_report_closed_findings_days_argument_provided(self):
+        error_message = 'argument --report-closed-findings-days/-rd: {value} is an invalid positive int value'
+        for value in ['a', -1, 'garbage']:
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG']
+            os.environ['AWS_LABELER_REPORT_CLOSED_FINDINGS_DAYS'] = str(value)
+            parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+            self.assertTrue(parsing_error_message == error_message.format(value=value))
+            del os.environ['AWS_LABELER_REPORT_CLOSED_FINDINGS_DAYS']
