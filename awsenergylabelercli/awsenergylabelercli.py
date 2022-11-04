@@ -84,6 +84,12 @@ LOGGER_BASENAME = '''awsenergylabelercli'''
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
+SUPPRESSED_FINDINGS_QUERY = {'WorkflowStatus': [{'Value': 'SUPPRESSED',
+                                                 'Comparison': 'EQUALS'}]}
+
+RESOLVED_FINDINGS_QUERY = lambda x: {'UpdatedAt': [{'DateRange': {'Value': x, 'Unit': 'DAYS'}}],  # noqa
+                                     'WorkflowStatus': [{'Value': 'RESOLVED', 'Comparison': 'EQUALS'}]}
+
 
 def get_parser():
     """Constructs the parser with all the arguments and returns it."""
@@ -289,13 +295,14 @@ def setup_logging(level, config_file=None):
         coloredlogs.install(level=level.upper())
 
 
-def wait_for_findings(method_name, method_argument, log_level):
+def wait_for_findings(method_name, method_argument, log_level, finding_type=None):
     """If log level is not debug shows a spinner while the callable provided gets security hub findings.
 
     Args:
         method_name: The method to execute while waiting.
         method_argument: The argument to pass to the method.
         log_level: The log level as set by the user.
+        finding_type: The type of the finding to use for the helping message.
 
     Returns:
         findings: A list of security hub findings as retrieved by the callable.
@@ -303,11 +310,12 @@ def wait_for_findings(method_name, method_argument, log_level):
     """
     try:
         if log_level != 'debug':
-            with yaspin(text="Please wait while retrieving Security Hub findings...", color="yellow") as spinner:
-                findings = method_name(method_argument)
+            with yaspin(text=f"Please wait while retrieving Security Hub{f' {finding_type} ' if finding_type else ' '}"
+                             f"findings...", color="yellow") as spinner:
+                findings = method_name(method_argument) if method_argument else method_name()
             spinner.ok("✅")
         else:
-            findings = method_name(method_argument)
+            findings = method_name(method_argument) if method_argument else method_name()
     except Exception as msg:
         LOGGER.error(msg)
         raise SystemExit(1)
@@ -389,8 +397,8 @@ def get_account_reporting_data(account_id,
                                allowed_regions,
                                denied_regions,
                                export_all_data_flag,
-                               report_closed_findings_days,  # pylint: disable=unused-argument
-                               report_suppressed_findings,  # pylint: disable=unused-argument
+                               report_closed_findings_days,
+                               report_suppressed_findings,
                                account_thresholds,
                                security_hub_query_filter,
                                log_level):
@@ -403,17 +411,16 @@ def get_account_reporting_data(account_id,
         allowed_regions: The allowed regions for security hub if any.
         denied_regions: The denied regions for security hub if any.
         export_all_data_flag: If set all data is going to be exported, else only basic reporting.
-        report_closed_findings_days:
-        report_suppressed_findings:
-        account_thresholds:
+        report_closed_findings_days: The number of days to report the resolved findings for.
+        report_suppressed_findings: A flag to report on suppressed findings or not.
+        account_thresholds: The account thresholds to apply.
+        security_hub_query_filter: The security hub filter to apply.
         log_level: The log level set.
 
     Returns:
         report_data, exporter_arguments
 
     """
-    # report_closed_findings_days,
-    # report_suppressed_findings,
     account = AwsAccount(account_id, 'Not Retrieved', account_thresholds or ACCOUNT_THRESHOLDS)
     security_hub = SecurityHub(region=region,
                                allowed_regions=allowed_regions,
@@ -433,6 +440,23 @@ def get_account_reporting_data(account_id,
                    ['Max Days Open:', account.energy_label.max_days_open]]
     if account.alias:
         report_data.append(['Account Alias:', account.alias])
+    if report_closed_findings_days:
+        query_filter = SecurityHub.calculate_query_filter(RESOLVED_FINDINGS_QUERY(report_closed_findings_days),
+                                                          allowed_account_ids=[account_id],
+                                                          denied_account_ids=None,
+                                                          frameworks=frameworks)
+        resolved_findings = wait_for_findings(security_hub.get_findings,
+                                              query_filter,
+                                              log_level,
+                                              'resolved')
+        report_data.append([f'Resolved Findings Last {report_closed_findings_days} Days:', len(resolved_findings)])
+    if report_suppressed_findings:
+        query_filter = SecurityHub.calculate_query_filter(SUPPRESSED_FINDINGS_QUERY,
+                                                          allowed_account_ids=[account_id],
+                                                          denied_account_ids=None,
+                                                          frameworks=frameworks)
+        suppressed_findings = wait_for_findings(security_hub.get_findings, query_filter, log_level, 'suppressed')
+        report_data.append(['Suppressed Findings:', len(suppressed_findings)])
     export_types = ALL_ACCOUNT_EXPORT_TYPES if export_all_data_flag else ACCOUNT_METRIC_EXPORT_TYPES
     exporter_arguments = {'export_types': export_types,
                           'name': account.id,

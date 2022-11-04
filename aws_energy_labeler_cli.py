@@ -36,7 +36,7 @@ import logging
 
 from art import text2art
 from terminaltables import AsciiTable
-from awsenergylabelerlib import DataExporter
+from awsenergylabelerlib import DataExporter, DEFAULT_SECURITY_HUB_FRAMEWORKS
 from awsenergylabelerlib._version import __version__ as lib_version
 from awsenergylabelercli._version import __version__ as cli_version
 
@@ -59,6 +59,34 @@ __status__ = '''Development'''  # "Prototype", "Development", "Production".
 LOGGER_BASENAME = '''aws_energy_labeler_cli'''
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
+
+
+def enrich_default_report_data(report_data, args, start_run_time):
+    """Enriches the interactive report data with default metadata.
+
+    Technically the data is mutated during the function so returning it is not needed.
+
+    Args:
+        report_data: The report_data to mutate.
+        args: The args of the execution.
+        start_run_time: The start run time of the execution to calculate the total duration.
+
+    Returns:
+        The mutated report_data.
+
+    """
+    report_data.append(['Default Account Thresholds Overwritten:', bool(args.account_thresholds)])
+    if any([args.organizations_zone_name, args.audit_zone_name]):
+        report_data.append(['Default Zone Thresholds Overwritten:', bool(args.zone_thresholds)])
+    report_data.append(['Default Security Hub Query Filter Overwritten:', bool(args.security_hub_query_filter)])
+    if set(args.frameworks) != set(DEFAULT_SECURITY_HUB_FRAMEWORKS):
+        report_data.append(['Default Frameworks Overwritten:', True])
+    end_run_time = datetime.datetime.now()
+    report_data.extend([['Library Version:', lib_version],
+                        ['Cli Version:', cli_version],
+                        ['Date and time of execution:', str(end_run_time)],
+                        ['Duration of run:', str(end_run_time - start_run_time)]])
+    return report_data
 
 
 def _get_reporting_arguments(args):
@@ -86,16 +114,7 @@ def _get_reporting_arguments(args):
                                  'zone_type': zone_type,
                                  'zone_thresholds': args.zone_thresholds})
     report_data, exporter_arguments = get_reporting_data(**method_arguments)
-    report_data.append(['Default Account Thresholds Overwritten:', True if args.account_thresholds else False])
-    if any([args.organizations_zone_name, args.audit_zone_name]):
-        report_data.append(['Default Zone Thresholds Overwritten:', True if args.zone_thresholds else False])
-    report_data.append(['Default Security Hub Query Filter Overwritten:',
-                        True if args.security_hub_query_filter else False])
-    end_run_time = datetime.datetime.now()
-    report_data.extend([['Library Version:', lib_version],
-                        ['Cli Version:', cli_version],
-                        ['Date and time of execution:', str(end_run_time)],
-                        ['Duration of run:', str(end_run_time - start_run_time)]])
+    report_data = enrich_default_report_data(report_data, args, start_run_time)
     return report_data, exporter_arguments
 
 
