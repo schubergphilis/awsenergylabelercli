@@ -634,29 +634,6 @@ class TestExportArgs(unittest.TestCase):
 
 class TestReportingArgs(unittest.TestCase):
 
-    def test_report_metadata_argument_not_provided(self):
-        args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
-        self.assertFalse(args.report_metadata)
-
-    def test_report_metadata_argument_provided(self):
-        arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-m']
-        args = get_arguments(arguments)
-        self.assertTrue(args.report_metadata)
-
-    def test_valid_report_metadata_env_var_provided(self):
-        for value in ['t', 'T', 'true', 'True', '1', 'TRUE']:
-            os.environ['AWS_LABELER_REPORT_METADATA'] = value
-            args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
-            self.assertTrue(args.report_metadata)
-            del os.environ['AWS_LABELER_REPORT_METADATA']
-
-    def test_invalid_report_metadata_env_var_provided(self):
-        for value in ['TrUe', 'bob', 'garbage']:
-            os.environ['AWS_LABELER_REPORT_METADATA'] = value
-            args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
-            self.assertFalse(args.report_metadata)
-            del os.environ['AWS_LABELER_REPORT_METADATA']
-
     def test_valid_report_closed_findings_days_argument_provided(self):
         for days in [5, '6', '100', 3 * 5]:
             arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-rd', str(days)]
@@ -760,7 +737,7 @@ class TestThresholdsArgs(unittest.TestCase):
         self.assertTrue(parsing_error_message == self.invalid_account_thresholds_message.format(
             value=self.valid_json_string))
 
-####
+    ####
     def test_invalid_json_zone_thresholds_argument_provided(self):
         arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-zt', self.invalid_json_string]
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
@@ -798,17 +775,18 @@ class TestThresholdsArgs(unittest.TestCase):
         self.assertTrue(parsing_error_message == self.invalid_zone_thresholds_message.format(
             value=self.valid_json_string))
 
+
 class TestSecurityHubQueryFilterArgs(unittest.TestCase):
 
     def setUp(self) -> None:
         self.invalid_json_string = '"sddf'
         self.valid_json_string = '"{}"'
-        self.invalid_query_json_message = 'argument --security-hub-filter/-sf: {value} is an invalid json string.'
+        self.invalid_query_json_message = 'argument --security-hub-query-filter/-sf: {value} is an invalid json string.'
 
     def test_valid_json_query_filter_argument_provided(self):
         arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-sf', self.valid_json_string]
         args = get_arguments(arguments)
-        self.assertTrue(args.security_hub_filter == json.loads(self.valid_json_string))
+        self.assertTrue(args.security_hub_query_filter == json.loads(self.valid_json_string))
 
     def test_invalid_json_query_filter_argument_provided(self):
         arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-sf', self.invalid_json_string]
@@ -820,7 +798,7 @@ class TestSecurityHubQueryFilterArgs(unittest.TestCase):
         os.environ['AWS_LABELER_SECURITY_HUB_QUERY_FILTER'] = self.valid_json_string
         args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
         del os.environ['AWS_LABELER_SECURITY_HUB_QUERY_FILTER']
-        self.assertTrue(args.security_hub_filter == json.loads(self.valid_json_string))
+        self.assertTrue(args.security_hub_query_filter == json.loads(self.valid_json_string))
 
     def test_invalid_zone_thresholds_env_var_provided(self):
         os.environ['AWS_LABELER_SECURITY_HUB_QUERY_FILTER'] = self.invalid_json_string

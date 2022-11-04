@@ -65,7 +65,6 @@ def _get_reporting_arguments(args):
                         'allowed_regions': args.allowed_regions,
                         'denied_regions': args.denied_regions,
                         'export_all_data_flag': args.export_all,
-                        'report_metadata': args.report_metadata,
                         'report_closed_findings_days': args.report_closed_findings_days,
                         'report_suppressed_findings': args.report_suppressed_findings,
                         'account_thresholds': args.account_thresholds,

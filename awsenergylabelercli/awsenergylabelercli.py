@@ -38,7 +38,6 @@ import logging.config
 import os
 
 import coloredlogs
-
 from yaspin import yaspin
 from awsenergylabelerlib import (validate_regions,
                                  validate_account_ids,
@@ -179,12 +178,6 @@ def get_parser():
                         action='store_true',
                         default=environment_variable_boolean(os.environ.get('AWS_LABELER_TO_JSON', False)),
                         help='Return the report in json format.')
-    parser.add_argument('--report-metadata',
-                        '-m',
-                        action='store_true',
-                        default=environment_variable_boolean(os.environ.get('AWS_LABELER_REPORT_METADATA')),
-                        help='If set the report will contain info about the tool version and the timestamp of the '
-                             'execution')
     parser.add_argument('--report-closed-findings-days',
                         '-rd',
                         action='store',
@@ -214,7 +207,6 @@ def get_parser():
                         type=json_string,
                         default=os.environ.get('AWS_LABELER_SECURITY_HUB_QUERY_FILTER'),
                         help='If set the zone thresholds will be used instead of the default ones.')
-
     parser.set_defaults(export_all=True)
     return parser
 
@@ -331,7 +323,6 @@ def get_zone_reporting_data(zone_name,
                             allowed_regions,
                             denied_regions,
                             export_all_data_flag,
-                            report_metadata,  # pylint: disable=unused-argument
                             report_closed_findings_days,  # pylint: disable=unused-argument
                             report_suppressed_findings,  # pylint: disable=unused-argument
                             account_thresholds,
@@ -362,7 +353,6 @@ def get_zone_reporting_data(zone_name,
         report_data, exporter_arguments
 
     """
-    # report_metadata,
     # report_closed_findings_days,
     # report_suppressed_findings,
     labeler = EnergyLabeler(zone_name=zone_name,
@@ -400,7 +390,6 @@ def get_account_reporting_data(account_id,
                                allowed_regions,
                                denied_regions,
                                export_all_data_flag,
-                               report_metadata,  # pylint: disable=unused-argument
                                report_closed_findings_days,  # pylint: disable=unused-argument
                                report_suppressed_findings,  # pylint: disable=unused-argument
                                account_thresholds,
@@ -425,7 +414,6 @@ def get_account_reporting_data(account_id,
         report_data, exporter_arguments
 
     """
-    # report_metadata,
     # report_closed_findings_days,
     # report_suppressed_findings,
     account = AwsAccount(account_id, 'Not Retrieved', account_thresholds or ACCOUNT_THRESHOLDS)
