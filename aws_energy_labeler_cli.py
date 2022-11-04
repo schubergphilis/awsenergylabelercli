@@ -84,7 +84,7 @@ def enrich_default_report_data(report_data, args, start_run_time):
     end_run_time = datetime.datetime.now()
     report_data.extend([['Library Version:', lib_version],
                         ['Cli Version:', cli_version],
-                        ['Date and time of execution:', str(end_run_time)],
+                        ['Date and time of end of execution:', str(end_run_time)],
                         ['Duration of run:', str(end_run_time - start_run_time)]])
     return report_data
 

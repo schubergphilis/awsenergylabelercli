@@ -331,8 +331,8 @@ def get_zone_reporting_data(zone_name,
                             allowed_regions,
                             denied_regions,
                             export_all_data_flag,
-                            report_closed_findings_days,  # pylint: disable=unused-argument
-                            report_suppressed_findings,  # pylint: disable=unused-argument
+                            report_closed_findings_days,
+                            report_suppressed_findings,
                             account_thresholds,
                             zone_thresholds,
                             security_hub_query_filter,
@@ -381,6 +381,27 @@ def get_zone_reporting_data(zone_name,
     if labeler.zone_energy_label.best_label != labeler.zone_energy_label.worst_label:
         report_data.extend([['Best Account Security Score:', labeler.zone_energy_label.best_label],
                             ['Worst Account Security Score:', labeler.zone_energy_label.worst_label]])
+    if report_closed_findings_days:
+        LOGGER.warning(f'Reporting on resolved findings is not functional yet.')
+        # query_filter = labeler.security_hub.calculate_query_filter(RESOLVED_FINDINGS_QUERY(report_closed_findings_days),
+        #                                                            allowed_account_ids=allowed_account_ids,
+        #                                                            denied_account_ids=denied_account_ids,
+        #                                                            frameworks=frameworks)
+        # resolved_findings = wait_for_findings(labeler.security_hub.get_findings,
+        #                                       query_filter,
+        #                                       log_level,
+        #                                       'resolved')
+        # report_data.append([f'Resolved Findings Last {report_closed_findings_days} Days:', len(resolved_findings)])
+    if report_suppressed_findings:
+        query_filter = labeler.security_hub.calculate_query_filter(SUPPRESSED_FINDINGS_QUERY,
+                                                                   allowed_account_ids=allowed_account_ids,
+                                                                   denied_account_ids=denied_account_ids,
+                                                                   frameworks=frameworks)
+        suppressed_findings = wait_for_findings(labeler.security_hub.get_findings,
+                                                query_filter,
+                                                log_level,
+                                                'suppressed')
+        report_data.append(['Suppressed Findings:', len(suppressed_findings)])
     export_types = ALL_ZONE_EXPORT_TYPES if export_all_data_flag else ZONE_METRIC_EXPORT_TYPES
     exporter_arguments = {'export_types': export_types,
                           'name': labeler.zone.name,
@@ -441,15 +462,16 @@ def get_account_reporting_data(account_id,
     if account.alias:
         report_data.append(['Account Alias:', account.alias])
     if report_closed_findings_days:
-        query_filter = SecurityHub.calculate_query_filter(RESOLVED_FINDINGS_QUERY(report_closed_findings_days),
-                                                          allowed_account_ids=[account_id],
-                                                          denied_account_ids=None,
-                                                          frameworks=frameworks)
-        resolved_findings = wait_for_findings(security_hub.get_findings,
-                                              query_filter,
-                                              log_level,
-                                              'resolved')
-        report_data.append([f'Resolved Findings Last {report_closed_findings_days} Days:', len(resolved_findings)])
+        LOGGER.warning(f'Reporting on resolved findings is not functional yet.')
+        # query_filter = SecurityHub.calculate_query_filter(RESOLVED_FINDINGS_QUERY(report_closed_findings_days),
+        #                                                   allowed_account_ids=[account_id],
+        #                                                   denied_account_ids=None,
+        #                                                   frameworks=frameworks)
+        # resolved_findings = wait_for_findings(security_hub.get_findings,
+        #                                       query_filter,
+        #                                       log_level,
+        #                                       'resolved')
+        # report_data.append([f'Resolved Findings Last {report_closed_findings_days} Days:', len(resolved_findings)])
     if report_suppressed_findings:
         query_filter = SecurityHub.calculate_query_filter(SUPPRESSED_FINDINGS_QUERY,
                                                           allowed_account_ids=[account_id],
