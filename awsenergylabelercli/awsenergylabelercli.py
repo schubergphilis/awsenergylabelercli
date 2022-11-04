@@ -341,7 +341,6 @@ def get_zone_reporting_data(zone_name,
         allowed_regions: The allowed regions for security hub if any.
         denied_regions: The denied regions for security hub if any.
         export_all_data_flag: If set all data is going to be exported, else only basic reporting.
-        report_metadata:
         report_closed_findings_days:
         report_suppressed_findings:
         account_thresholds:
@@ -404,7 +403,6 @@ def get_account_reporting_data(account_id,
         allowed_regions: The allowed regions for security hub if any.
         denied_regions: The denied regions for security hub if any.
         export_all_data_flag: If set all data is going to be exported, else only basic reporting.
-        report_metadata:
         report_closed_findings_days:
         report_suppressed_findings:
         account_thresholds:

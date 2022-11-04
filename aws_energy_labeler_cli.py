@@ -30,13 +30,15 @@ Main code for aws_energy_labeler_cli.
    http://google.github.io/styleguide/pyguide.html
 
 """
-
+import datetime
 import json
 import logging
 
 from art import text2art
 from terminaltables import AsciiTable
 from awsenergylabelerlib import DataExporter
+from awsenergylabelerlib._version import __version__ as lib_version
+from awsenergylabelercli._version import __version__ as cli_version
 
 from awsenergylabelercli import (get_arguments,
                                  setup_logging,
@@ -64,12 +66,13 @@ def _get_reporting_arguments(args):
                         'frameworks': args.frameworks,
                         'allowed_regions': args.allowed_regions,
                         'denied_regions': args.denied_regions,
-                        'export_all_data_flag': args.export_all,
                         'report_closed_findings_days': args.report_closed_findings_days,
                         'report_suppressed_findings': args.report_suppressed_findings,
                         'account_thresholds': args.account_thresholds,
+                        'export_all_data_flag': args.export_all,
                         'security_hub_query_filter': args.security_hub_query_filter,
                         'log_level': args.log_level}
+    start_run_time = datetime.datetime.now()
     if args.single_account_id:
         get_reporting_data = get_account_reporting_data
         method_arguments.update({'account_id': args.single_account_id})
@@ -82,7 +85,18 @@ def _get_reporting_arguments(args):
                                  'denied_account_ids': args.denied_account_ids,
                                  'zone_type': zone_type,
                                  'zone_thresholds': args.zone_thresholds})
-    return get_reporting_data(**method_arguments)
+    report_data, exporter_arguments = get_reporting_data(**method_arguments)
+    report_data.append(['Default Account Thresholds Overwritten:', True if args.account_thresholds else False])
+    if any([args.organizations_zone_name, args.audit_zone_name]):
+        report_data.append(['Default Zone Thresholds Overwritten:', True if args.zone_thresholds else False])
+    report_data.append(['Default Security Hub Query Filter Overwritten:',
+                        True if args.security_hub_query_filter else False])
+    end_run_time = datetime.datetime.now()
+    report_data.extend([['Library Version:', lib_version],
+                        ['Cli Version:', cli_version],
+                        ['Date and time of execution:', str(end_run_time)],
+                        ['Duration of run:', str(end_run_time - start_run_time)]])
+    return report_data, exporter_arguments
 
 
 def report(report_data, to_json=False):
