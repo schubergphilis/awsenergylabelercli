@@ -382,8 +382,9 @@ def get_zone_reporting_data(zone_name,
         report_data.extend([['Best Account Security Score:', labeler.zone_energy_label.best_label],
                             ['Worst Account Security Score:', labeler.zone_energy_label.worst_label]])
     if report_closed_findings_days:
-        LOGGER.warning(f'Reporting on resolved findings is not functional yet.')
-        # query_filter = labeler.security_hub.calculate_query_filter(RESOLVED_FINDINGS_QUERY(report_closed_findings_days),
+        LOGGER.warning('Reporting on resolved findings is not functional yet.')
+        # query_filter = labeler.security_hub.calculate_query_filter(RESOLVED_FINDINGS_QUERY(
+        #                                                                report_closed_findings_days),
         #                                                            allowed_account_ids=allowed_account_ids,
         #                                                            denied_account_ids=denied_account_ids,
         #                                                            frameworks=frameworks)
@@ -462,7 +463,7 @@ def get_account_reporting_data(account_id,
     if account.alias:
         report_data.append(['Account Alias:', account.alias])
     if report_closed_findings_days:
-        LOGGER.warning(f'Reporting on resolved findings is not functional yet.')
+        LOGGER.warning('Reporting on resolved findings is not functional yet.')
         # query_filter = SecurityHub.calculate_query_filter(RESOLVED_FINDINGS_QUERY(report_closed_findings_days),
         #                                                   allowed_account_ids=[account_id],
         #                                                   denied_account_ids=None,
