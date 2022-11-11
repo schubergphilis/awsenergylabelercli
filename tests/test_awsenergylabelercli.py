@@ -190,6 +190,11 @@ class TestRegion(unittest.TestCase):
         args = get_arguments(['-r', valid_region, '-z', 'DUMMY_ZONE_NAME'])
         self.assertTrue(args.region == valid_region)
 
+    def test_valid_region_long_argument_provided(self):
+        valid_region = 'eu-west-1'
+        args = get_arguments(['--region', valid_region, '-z', 'DUMMY_ZONE_NAME'])
+        self.assertTrue(args.region == valid_region)
+
     def test_valid_region_env_var_provided(self):
         valid_region = 'eu-west-1'
         os.environ['AWS_LABELER_REGION'] = valid_region
@@ -212,7 +217,7 @@ class TestZone(unittest.TestCase):
         """
         Test set up
 
-        This is where you can setup things that you use throughout the tests. This method is called before every test.
+        This is where you can set up things that you use throughout the tests. This method is called before every test.
         """
         self.missing_arguments_message = ('one of the arguments --organizations-zone-name/-o '
                                           '--audit-zone-name/-z --single-account-id/-s is required')
@@ -394,11 +399,19 @@ class TestAccountIds(unittest.TestCase):
     def setUp(self) -> None:
         self.mutually_exclusive_arguments_message = ('argument --allowed-account-ids/-a: not allowed with argument '
                                                      '--denied-account-ids/-d')
+        # self.mutually_exclusive_arguments_with_single_message = ('arguments --allowed-account-ids/-a '
+        #                                                          '--denied-account-ids/-d '
+        #                                                          '--single-account-id/-s are mutually exclusive')
 
     def test_mutually_exclusive_account_id_arguments(self):
         arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-a', '123456789012', '-d', '123456789012']
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    # def test_mutually_exclusive_account_id_with_single_account_arguments(self):
+    #     arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-a', '123456789012', '-s', '123456789012']
+    #     parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+    #     self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_with_single_message)
 
     def test_allowed_account_ids_valid_as_argument(self):
         valid_account_ids = ['123456789012', '234567890123']
