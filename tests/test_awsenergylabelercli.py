@@ -185,6 +185,12 @@ class TestRegion(unittest.TestCase):
                                                   SECURITY_HUB_ACTIVE_REGIONS=SECURITY_HUB_ACTIVE_REGIONS)
         self.assertTrue(get_parsing_error_message(get_arguments, ['-r', invalid_region]) == error_message)
 
+    def test_invalid_long_region(self):
+        invalid_region = 'bob'
+        error_message = self.error_message.format(invalid_region=invalid_region,
+                                                  SECURITY_HUB_ACTIVE_REGIONS=SECURITY_HUB_ACTIVE_REGIONS)
+        self.assertTrue(get_parsing_error_message(get_arguments, ['--region', invalid_region]) == error_message)
+
     def test_valid_region_argument_provided(self):
         valid_region = 'eu-west-1'
         args = get_arguments(['-r', valid_region, '-z', 'DUMMY_ZONE_NAME'])
@@ -236,10 +242,29 @@ class TestOrganization(TestZone):
         args = get_arguments(['-r', 'eu-west-1', '-o', valid_org_name])
         self.assertTrue(args.organizations_zone_name == valid_org_name)
 
+    def test_valid_organization_name_long_argument_provided(self):
+        valid_org_name = 'TEST_ORG'
+        args = get_arguments(['-r', 'eu-west-1', '--organizations-zone-name', valid_org_name])
+        self.assertTrue(args.organizations_zone_name == valid_org_name)
+
     def test_valid_organization_name_env_var_provided(self):
         valid_org_name = 'TEST_ORG'
         os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME'] = valid_org_name
+        args = get_arguments(['-r', 'eu-west-1'])
+        del os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME']
+        self.assertTrue(args.organizations_zone_name == valid_org_name)
+
+    def test_valid_organization_name_env_var_argument_provided(self):
+        valid_org_name = 'TEST_ORG'
+        os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME'] = valid_org_name
         args = get_arguments(['-r', 'eu-west-1', '-o', valid_org_name])
+        del os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME']
+        self.assertTrue(args.organizations_zone_name == valid_org_name)
+
+    def test_valid_organization_name_env_var_long_argument_provided(self):
+        valid_org_name = 'TEST_ORG'
+        os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME'] = valid_org_name
+        args = get_arguments(['-r', 'eu-west-1', '--organizations-zone-name', valid_org_name])
         del os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME']
         self.assertTrue(args.organizations_zone_name == valid_org_name)
 
@@ -249,42 +274,150 @@ class TestOrganization(TestZone):
                                                                           '-z', 'ZONE_NAME'])
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
-    def test_mutually_exclusive_with_audit_zone_and_single_as_arguments(self):
+    def test_mutually_exclusive_with_audit_zone_both_as_long_arguments(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--organizations-zone-name', 'ORG_NAME',
+                                                                          '--audit-zone-name', 'ZONE_NAME'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_audit_zone_as_long_argument_org_as_argument(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '-o', 'ORG_NAME',
+                                                                          '--audit-zone-name', 'ZONE_NAME'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_audit_zone_as_argument_org_as_long_argument(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--organizations-zone-name', 'ORG_NAME',
+                                                                          '-z', 'ZONE_NAME'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_audit_zone_and_single_and_org_as_arguments(self):
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
                                                                           '-o', 'ORG_NAME',
                                                                           '-z', 'ZONE_NAME',
                                                                           '-s', '123456789012'])
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
-    def test_mutually_exclusive_with_single_account_both_as_arguments(self):
+    def test_mutually_exclusive_with_audit_zone_and_single_and_org_as_long_arguments(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--organizations-zone-name', 'ORG_NAME',
+                                                                          '--audit-zone-name', 'ZONE_NAME',
+                                                                          '--single-account-id', '123456789012'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_audit_zone_as_argument_and_single_and_org_as_long_arguments(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--organizations-zone-name', 'ORG_NAME',
+                                                                          '-z', 'ZONE_NAME',
+                                                                          '--single-account-id', '123456789012'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_audit_zone_and_org_as_long_arguments_and_single_as_argument(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--organizations-zone-name', 'ORG_NAME',
+                                                                          '--audit-zone-name', 'ZONE_NAME',
+                                                                          '-s', '123456789012'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_audit_zone_as_long_argument_and_org_and_single_as_arguments(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '-o', 'ORG_NAME',
+                                                                          '--audit-zone-name', 'ZONE_NAME',
+                                                                          '-s', '123456789012'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_audit_zone_and_single_as_argument_and_org_as_long_argument(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--organizations-zone-name', 'ORG_NAME',
+                                                                          '-z', 'ZONE_NAME',
+                                                                          '-s', '123456789012'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_audit_zone_and_org_as_argument_and_single_as_long_argument(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '-o', 'ORG_NAME',
+                                                                          '-z', 'ZONE_NAME',
+                                                                          '--single-account-id', '123456789012'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_single_account_and_org_as_arguments(self):
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
                                                                           '-o', 'ORG_NAME',
                                                                           '-s', '123456789012'])
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
-    def test_mutually_exclusive_with_audit_zone_organization_as_env_var(self):
+    def test_mutually_exclusive_with_single_account_and_org_as_long_arguments(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--organizations-zone-name', 'ORG_NAME',
+                                                                          '--single-account-id', '123456789012'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_single_account_as_argument_and_org_as_long_argument(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--organizations-zone-name', 'ORG_NAME',
+                                                                          '-s', '123456789012'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_single_account_as_long_argument_and_org_as_argument(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '-o', 'ORG_NAME',
+                                                                          '--single-account-id', '123456789012'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_audit_zone_as_argument_and_organization_as_env_var(self):
         valid_org_name = 'VALID_ORG'
         os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME'] = valid_org_name
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1', '-z', 'ZONE_NAME'])
         del os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME']
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
-    def test_mutually_exclusive_with_single_account_organization_as_env_var(self):
+    def test_mutually_exclusive_with_audit_zone_as_long_argument_and_organization_as_env_var(self):
+        valid_org_name = 'VALID_ORG'
+        os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME'] = valid_org_name
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--audit-zone-name', 'ZONE_NAME'])
+        del os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME']
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_single_account_as_argument_and_organization_as_env_var(self):
         valid_org_name = 'VALID_ORG'
         os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME'] = valid_org_name
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1', '-s', '123456789012'])
         del os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME']
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
-    def test_mutually_exclusive_with_audit_zone_as_env_var(self):
+    def test_mutually_exclusive_with_single_account_as_long_argument_and_organization_as_env_var(self):
+        valid_org_name = 'VALID_ORG'
+        os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME'] = valid_org_name
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--single-account-id', '123456789012'])
+        del os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME']
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_audit_zone_as_env_var_and_org_as_argument(self):
         os.environ['AWS_LABELER_AUDIT_ZONE_NAME'] = 'ZONE_NAME'
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1', '-o', 'ORG_NAME'])
         del os.environ['AWS_LABELER_AUDIT_ZONE_NAME']
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
-    def test_mutually_exclusive_with_single_account_as_env_var(self):
+    def test_mutually_exclusive_with_audit_zone_as_env_var_and_org_as_long_argument(self):
+        os.environ['AWS_LABELER_AUDIT_ZONE_NAME'] = 'ZONE_NAME'
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--organizations-zone-name', 'ORG_NAME'])
+        del os.environ['AWS_LABELER_AUDIT_ZONE_NAME']
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_single_account_as_env_var_and_org_as_argument(self):
         os.environ['AWS_LABELER_SINGLE_ACCOUNT_ID'] = '123456789012'
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1', '-o', 'ORG_NAME'])
+        del os.environ['AWS_LABELER_SINGLE_ACCOUNT_ID']
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_single_account_as_env_var_and_org_as_long_argument(self):
+        os.environ['AWS_LABELER_SINGLE_ACCOUNT_ID'] = '123456789012'
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--organizations-zone-name', 'ORG_NAME'])
         del os.environ['AWS_LABELER_SINGLE_ACCOUNT_ID']
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
@@ -300,6 +433,11 @@ class TestAuditZone(TestZone):
         args = get_arguments(['-r', 'eu-west-1', '-z', valid_zone_name])
         self.assertTrue(args.audit_zone_name == valid_zone_name)
 
+    def test_valid_audit_zone_name_long_argument_provided(self):
+        valid_zone_name = 'AUDIT_ZONE'
+        args = get_arguments(['-r', 'eu-west-1', '--audit-zone-name', valid_zone_name])
+        self.assertTrue(args.audit_zone_name == valid_zone_name)
+
     def test_valid_audit_zone_name_env_var_provided(self):
         valid_zone_name = 'AUDIT_ZONE'
         os.environ['AWS_LABELER_AUDIT_ZONE_NAME'] = valid_zone_name
@@ -313,16 +451,49 @@ class TestAuditZone(TestZone):
                                                                           '-s', '123456789012'])
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
-    def test_mutually_exclusive_with_organizations_as_env_var(self):
+    def test_mutually_exclusive_with_single_account_both_as_long_arguments(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--audit-zone-name', 'AUDIT_ZONE',
+                                                                          '--single-account-id', '123456789012'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_single_account_as_long_argument_and_audit_zone_as_argument(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '-z', 'AUDIT_ZONE',
+                                                                          '--single-account-id', '123456789012'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_single_account_as_argument_and_audit_zone_as_long_argument(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--audit-zone-name', 'AUDIT_ZONE',
+                                                                          '-s', '123456789012'])
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_organizations_as_env_var_and_audit_zone_as_argument(self):
         valid_org_name = 'VALID_ORG'
         os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME'] = valid_org_name
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1', '-z', 'AUDIT_ZONE'])
         del os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME']
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
-    def test_mutually_exclusive_with_single_account_as_env_var(self):
+    def test_mutually_exclusive_with_organizations_as_env_var_and_audit_zone_as_long_argument(self):
+        valid_org_name = 'VALID_ORG'
+        os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME'] = valid_org_name
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--audit-zone-name', 'AUDIT_ZONE'])
+        del os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME']
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_single_account_as_env_var_and_audit_zone_as_argument(self):
         os.environ['AWS_LABELER_SINGLE_ACCOUNT_ID'] = '123456789012'
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1', '-z', 'AUDIT_ZONE'])
+        del os.environ['AWS_LABELER_SINGLE_ACCOUNT_ID']
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_single_account_as_env_var_and_audit_zone_as_long_argument(self):
+        os.environ['AWS_LABELER_SINGLE_ACCOUNT_ID'] = '123456789012'
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--audit-zone-name', 'AUDIT_ZONE'])
         del os.environ['AWS_LABELER_SINGLE_ACCOUNT_ID']
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
@@ -338,6 +509,11 @@ class TestSingleAccount(TestZone):
         args = get_arguments(['-r', 'eu-west-1', '-s', valid_single_account])
         self.assertTrue(args.single_account_id == valid_single_account)
 
+    def test_valid_single_account_long_argument_provided(self):
+        valid_single_account = '123456789012'
+        args = get_arguments(['-r', 'eu-west-1', '--single-account-id', valid_single_account])
+        self.assertTrue(args.single_account_id == valid_single_account)
+
     def test_valid_single_account_id_env_var_provided(self):
         valid_single_account = '123456789012'
         os.environ['AWS_LABELER_SINGLE_ACCOUNT_ID'] = valid_single_account
@@ -345,16 +521,31 @@ class TestSingleAccount(TestZone):
         del os.environ['AWS_LABELER_SINGLE_ACCOUNT_ID']
         self.assertTrue(args.single_account_id == valid_single_account)
 
-    def test_mutually_exclusive_with_organizations_as_env_var(self):
+    def test_mutually_exclusive_with_organizations_as_env_var_and_single_as_argument(self):
         valid_org_name = 'VALID_ORG'
         os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME'] = valid_org_name
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1', '-s', '123456789012'])
         del os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME']
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
-    def test_mutually_exclusive_with_audit_zone_as_env_var(self):
+    def test_mutually_exclusive_with_organizations_as_env_var_and_single_as_long_argument(self):
+        valid_org_name = 'VALID_ORG'
+        os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME'] = valid_org_name
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--single-account-id', '123456789012'])
+        del os.environ['AWS_LABELER_ORGANIZATIONS_ZONE_NAME']
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_audit_zone_as_env_var_and_single_as_argument(self):
         os.environ['AWS_LABELER_AUDIT_ZONE_NAME'] = 'ZONE_NAME'
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1', '-s', '123456789012'])
+        del os.environ['AWS_LABELER_AUDIT_ZONE_NAME']
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_with_audit_zone_as_env_var_and_single_as_long_argument(self):
+        os.environ['AWS_LABELER_AUDIT_ZONE_NAME'] = 'ZONE_NAME'
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--single-account-id', '123456789012'])
         del os.environ['AWS_LABELER_AUDIT_ZONE_NAME']
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
@@ -369,6 +560,10 @@ class TestFrameworks(unittest.TestCase):
         args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG', '-f', ''])
         self.assertTrue(args.frameworks == [])
 
+    def test_empty_frameworks_with_long_argument(self):
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG', '--frameworks', ''])
+        self.assertTrue(args.frameworks == [])
+
     def test_default_frameworks(self):
         args = get_arguments(MINIMUM_REQUIRED_ARGUMENTS)
         self.assertTrue(args.frameworks == DEFAULT_SECURITY_HUB_FRAMEWORKS)
@@ -376,6 +571,16 @@ class TestFrameworks(unittest.TestCase):
     def test_invalid_frameworks(self):
         frameworks = 'aws-foundational-security-best-practices,bob'
         arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-f', frameworks]
+        parser = get_parser()
+        error_frameworks = parser.parse_args(arguments).frameworks
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        error_message = self.error_message.format(provided_frameworks=error_frameworks,
+                                                  frameworks=SecurityHub.frameworks)
+        self.assertTrue(parsing_error_message == error_message)
+
+    def test_invalid_frameworks_with_long_argument(self):
+        frameworks = 'aws-foundational-security-best-practices,bob'
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG', '--frameworks', frameworks]
         parser = get_parser()
         error_frameworks = parser.parse_args(arguments).frameworks
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
@@ -408,14 +613,41 @@ class TestAccountIds(unittest.TestCase):
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
+    def test_mutually_exclusive_account_id_long_arguments(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG',
+                     '--allowed-account-ids', '123456789012', '--denied-account-ids', '123456789012']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_allowed_account_id_as_long_argument_and_denied_account_id_as_argument(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG', '--allowed-account-ids', '123456789012', '-d', '123456789012']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_allowed_account_id_as_argument_and_denied_account_id_as_long_argument(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-a', '123456789012', '--denied-account-ids', '123456789012']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
     def test_mutually_exclusive_account_id_with_single_account_arguments(self):
         arguments = ['-r', 'eu-west-1', '-a', '123456789012', '-s', '123456789012']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_with_single_message)
+
+    def test_mutually_exclusive_account_id_with_single_account_long_arguments(self):
+        arguments = ['-r', 'eu-west-1', '-a', '123456789012', '--single-account-id', '123456789012']
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_with_single_message)
 
     def test_allowed_account_ids_valid_as_argument(self):
         valid_account_ids = ['123456789012', '234567890123']
         args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME', '-a', ','.join(valid_account_ids)])
+        self.assertTrue(args.allowed_account_ids == valid_account_ids)
+
+    def test_allowed_account_ids_valid_as_long_argument(self):
+        valid_account_ids = ['123456789012', '234567890123']
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME',
+                              '--allowed-account-ids', ','.join(valid_account_ids)])
         self.assertTrue(args.allowed_account_ids == valid_account_ids)
 
     def test_allowed_account_ids_valid_as_env_var(self):
@@ -428,6 +660,13 @@ class TestAccountIds(unittest.TestCase):
     def test_allowed_account_ids_invalid_as_argument(self):
         invalid_account_ids = ['a123456789012', '2345678s90123']
         arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME', '-a', ','.join(invalid_account_ids)]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        error_message = f'{invalid_account_ids} contains invalid account ids.'
+        self.assertTrue(parsing_error_message == error_message)
+
+    def test_allowed_account_ids_invalid_as_long_argument(self):
+        invalid_account_ids = ['a123456789012', '2345678s90123']
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME', '--allowed-account-ids', ','.join(invalid_account_ids)]
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         error_message = f'{invalid_account_ids} contains invalid account ids.'
         self.assertTrue(parsing_error_message == error_message)
@@ -446,6 +685,11 @@ class TestAccountIds(unittest.TestCase):
         args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME', '-d', ','.join(valid_account_ids)])
         self.assertTrue(args.denied_account_ids == valid_account_ids)
 
+    def test_denied_account_ids_valid_as_long_argument(self):
+        valid_account_ids = ['123456789012', '234567890123']
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME', '--denied-account-ids', ','.join(valid_account_ids)])
+        self.assertTrue(args.denied_account_ids == valid_account_ids)
+
     def test_denied_account_ids_valid_as_env_var(self):
         valid_account_ids = ['123456789012', '234567890123']
         os.environ['AWS_LABELER_DENIED_ACCOUNT_IDS'] = ','.join(valid_account_ids)
@@ -455,7 +699,14 @@ class TestAccountIds(unittest.TestCase):
 
     def test_denied_account_ids_invalid_as_argument(self):
         invalid_account_ids = ['a123456789012', '2345678s90123']
-        arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME', '-a', ','.join(invalid_account_ids)]
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME', '-d', ','.join(invalid_account_ids)]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        error_message = f'{invalid_account_ids} contains invalid account ids.'
+        self.assertTrue(parsing_error_message == error_message)
+
+    def test_denied_account_ids_invalid_as_long_argument(self):
+        invalid_account_ids = ['a123456789012', '2345678s90123']
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME', '--denied-account-ids', ','.join(invalid_account_ids)]
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         error_message = f'{invalid_account_ids} contains invalid account ids.'
         self.assertTrue(parsing_error_message == error_message)
