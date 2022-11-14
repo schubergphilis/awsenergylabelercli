@@ -734,8 +734,30 @@ class TestRegions(unittest.TestCase):
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
+    def test_mutually_exclusive_region_long_arguments(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG',
+                     '--allowed-regions', 'eu-west-1', '--denied-regions', 'eu-central-1']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_region_allowed_as_long_argument_denied_as_argument(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG',
+                     '--allowed-regions', 'eu-west-1', '-dr', 'eu-central-1']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
+    def test_mutually_exclusive_region_allowed_as_argument_denied_as_long_argument(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG',
+                     '-ar', 'eu-west-1', '--denied-regions', 'eu-central-1']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
+
     def test_allowed_regions_valid_as_argument(self):
         args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME', '-ar', ','.join(self.valid_regions)])
+        self.assertTrue(args.allowed_regions == self.valid_regions)
+
+    def test_allowed_regions_valid_as_long_argument(self):
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME', '--allowed-regions', ','.join(self.valid_regions)])
         self.assertTrue(args.allowed_regions == self.valid_regions)
 
     def test_allowed_regions_valid_as_env_var(self):
@@ -746,6 +768,12 @@ class TestRegions(unittest.TestCase):
 
     def test_allowed_regions_invalid_as_argument(self):
         arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME', '-ar', ','.join(self.invalid_regions)]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        error_message = f'{self.invalid_regions} contains invalid regions.'
+        self.assertTrue(parsing_error_message == error_message)
+
+    def test_allowed_regions_invalid_as_long_argument(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME', '--allowed-regions', ','.join(self.invalid_regions)]
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         error_message = f'{self.invalid_regions} contains invalid regions.'
         self.assertTrue(parsing_error_message == error_message)
@@ -762,6 +790,10 @@ class TestRegions(unittest.TestCase):
         args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME', '-dr', ','.join(self.valid_regions)])
         self.assertTrue(args.denied_regions == self.valid_regions)
 
+    def test_denied_regions_valid_as_long_argument(self):
+        args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME', '--denied-regions', ','.join(self.valid_regions)])
+        self.assertTrue(args.denied_regions == self.valid_regions)
+
     def test_denied_regions_valid_as_env_var(self):
         os.environ['AWS_LABELER_DENIED_REGIONS'] = ','.join(self.valid_regions)
         args = get_arguments(['-r', 'eu-west-1', '-o', 'ORG_NAME'])
@@ -770,6 +802,12 @@ class TestRegions(unittest.TestCase):
 
     def test_denied_regions_invalid_as_argument(self):
         arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME', '-dr', ','.join(self.invalid_regions)]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        error_message = f'{self.invalid_regions} contains invalid regions.'
+        self.assertTrue(parsing_error_message == error_message)
+
+    def test_denied_regions_invalid_as_long_argument(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG_NAME', '--denied-regions', ','.join(self.invalid_regions)]
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         error_message = f'{self.invalid_regions} contains invalid regions.'
         self.assertTrue(parsing_error_message == error_message)
@@ -799,6 +837,12 @@ class TestExportArgs(unittest.TestCase):
             args = get_arguments(arguments)
             self.assertTrue(args.export_path == local_path)
 
+    def test_export_valid_local_path_long_argument_provided(self):
+        for local_path in self.valid_local_paths:
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG', '--export-path', local_path]
+            args = get_arguments(arguments)
+            self.assertTrue(args.export_path == local_path)
+
     def test_export_valid_local_path_env_var_provided(self):
         for local_path in self.valid_local_paths:
             os.environ['AWS_LABELER_EXPORT_PATH'] = local_path
@@ -809,6 +853,14 @@ class TestExportArgs(unittest.TestCase):
     def test_export_invalid_local_path_argument_provided(self):
         for local_path in self.invalid_local_paths:
             arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-p', local_path]
+            parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+            error_message = f'{local_path} is an invalid export location. Example --export-path /a/directory or ' \
+                            f'--export-path s3://mybucket location'
+            self.assertTrue(parsing_error_message == error_message)
+
+    def test_export_invalid_local_path_long_argument_provided(self):
+        for local_path in self.invalid_local_paths:
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG', '--export-path', local_path]
             parsing_error_message = get_parsing_error_message(get_arguments, arguments)
             error_message = f'{local_path} is an invalid export location. Example --export-path /a/directory or ' \
                             f'--export-path s3://mybucket location'
@@ -829,6 +881,12 @@ class TestExportArgs(unittest.TestCase):
             args = get_arguments(arguments)
             self.assertTrue(args.export_path == s3_path)
 
+    def test_export_valid_s3_path_long_argument_provided(self):
+        for s3_path in self.valid_s3_paths:
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG', '--export-path', s3_path]
+            args = get_arguments(arguments)
+            self.assertTrue(args.export_path == s3_path)
+
     def test_export_valid_s3_path_env_var_provided(self):
         for s3_path in self.valid_s3_paths:
             os.environ['AWS_LABELER_EXPORT_PATH'] = s3_path
@@ -839,6 +897,14 @@ class TestExportArgs(unittest.TestCase):
     def test_export_invalid_s3_path_argument_provided(self):
         for s3_path in self.invalid_s3_paths:
             arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-p', s3_path]
+            parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+            error_message = f'{s3_path} is an invalid export location. Example --export-path /a/directory or ' \
+                            f'--export-path s3://mybucket location'
+            self.assertTrue(parsing_error_message == error_message)
+
+    def test_export_invalid_s3_path_long_argument_provided(self):
+        for s3_path in self.invalid_s3_paths:
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG', '--export-path', s3_path]
             parsing_error_message = get_parsing_error_message(get_arguments, arguments)
             error_message = f'{s3_path} is an invalid export location. Example --export-path /a/directory or ' \
                             f'--export-path s3://mybucket location'
@@ -855,6 +921,11 @@ class TestExportArgs(unittest.TestCase):
 
     def test_export_metrics_only_argument_provided(self):
         arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-e']
+        args = get_arguments(arguments)
+        self.assertFalse(args.export_all)
+
+    def test_export_metrics_only_long_argument_provided(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG', '--export-metrics-only']
         args = get_arguments(arguments)
         self.assertFalse(args.export_all)
 
@@ -881,6 +952,11 @@ class TestExportArgs(unittest.TestCase):
         args = get_arguments(arguments)
         self.assertTrue(args.to_json)
 
+    def test_export_to_json_long_argument_provided(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG', '--to-json']
+        args = get_arguments(arguments)
+        self.assertTrue(args.to_json)
+
     def test_export_valid_to_json_env_var_provided(self):
         for value in ['t', 'T', 'true', 'True', '1', 'TRUE']:
             os.environ['AWS_LABELER_TO_JSON'] = value
@@ -904,10 +980,23 @@ class TestReportingArgs(unittest.TestCase):
             args = get_arguments(arguments)
             self.assertTrue(args.report_closed_findings_days == int(days))
 
+    def test_valid_report_closed_findings_days_long_argument_provided(self):
+        for days in [5, '6', '100', 3 * 5]:
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG', '--report-closed-findings-days', str(days)]
+            args = get_arguments(arguments)
+            self.assertTrue(args.report_closed_findings_days == int(days))
+
     def test_invalid_report_closed_findings_days_argument_provided(self):
         error_message = 'argument --report-closed-findings-days/-rd: {value} is an invalid positive int value'
         for value in ['a', -1, 'garbage']:
             arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-rd', str(value)]
+            parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+            self.assertTrue(parsing_error_message == error_message.format(value=value))
+
+    def test_invalid_report_closed_findings_days_long_argument_provided(self):
+        error_message = 'argument --report-closed-findings-days/-rd: {value} is an invalid positive int value'
+        for value in ['a', -1, 'garbage']:
+            arguments = ['-r', 'eu-west-1', '-o', 'ORG', '--report-closed-findings-days', str(value)]
             parsing_error_message = get_parsing_error_message(get_arguments, arguments)
             self.assertTrue(parsing_error_message == error_message.format(value=value))
 
@@ -918,7 +1007,7 @@ class TestReportingArgs(unittest.TestCase):
             self.assertTrue(args.report_closed_findings_days == int(days))
             del os.environ['AWS_LABELER_REPORT_CLOSED_FINDINGS_DAYS']
 
-    def test_invalid_report_closed_findings_days_argument_provided(self):
+    def test_invalid_report_closed_findings_days_env_var_provided(self):
         error_message = 'argument --report-closed-findings-days/-rd: {value} is an invalid positive int value'
         for value in ['a', -1, 'garbage']:
             os.environ['AWS_LABELER_REPORT_CLOSED_FINDINGS_DAYS'] = str(value)
@@ -932,6 +1021,11 @@ class TestReportingArgs(unittest.TestCase):
 
     def test_report_suppressed_findings_argument_provided(self):
         arguments = ['-r', 'eu-west-1', '-o', 'ORG', '-rs']
+        args = get_arguments(arguments)
+        self.assertTrue(args.report_suppressed_findings)
+
+    def test_report_suppressed_findings_long_argument_provided(self):
+        arguments = ['-r', 'eu-west-1', '-o', 'ORG', '--report-suppressed-findings']
         args = get_arguments(arguments)
         self.assertTrue(args.report_suppressed_findings)
 
@@ -970,13 +1064,30 @@ class TestThresholdsArgs(unittest.TestCase):
         self.assertTrue(parsing_error_message == self.invalid_account_json_message.format(
             value=self.invalid_json_string))
 
+    def test_invalid_json_account_thresholds_long_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['--account-thresholds', self.invalid_json_string]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.invalid_account_json_message.format(
+            value=self.invalid_json_string))
+
     def test_valid_json_account_thresholds_argument_provided(self):
         arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-at', self.valid_account_thresholds]
         args = get_arguments(arguments)
         self.assertTrue(args.account_thresholds == ACCOUNT_THRESHOLDS)
 
+    def test_valid_json_account_thresholds_long_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['--account-thresholds', self.valid_account_thresholds]
+        args = get_arguments(arguments)
+        self.assertTrue(args.account_thresholds == ACCOUNT_THRESHOLDS)
+
     def test_invalid_account_thresholds_argument_provided(self):
         arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-at', self.valid_json_string]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.invalid_account_thresholds_message.format(
+            value=self.valid_json_string))
+
+    def test_invalid_account_thresholds_long_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['--account-thresholds', self.valid_json_string]
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         self.assertTrue(parsing_error_message == self.invalid_account_thresholds_message.format(
             value=self.valid_json_string))
@@ -1008,13 +1119,30 @@ class TestThresholdsArgs(unittest.TestCase):
         self.assertTrue(parsing_error_message == self.invalid_zone_json_message.format(
             value=self.invalid_json_string))
 
+    def test_invalid_json_zone_thresholds_long_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['--zone-thresholds', self.invalid_json_string]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.invalid_zone_json_message.format(
+            value=self.invalid_json_string))
+
     def test_valid_json_zone_thresholds_argument_provided(self):
         arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-zt', self.valid_zone_thresholds]
         args = get_arguments(arguments)
         self.assertTrue(args.zone_thresholds == ZONE_THRESHOLDS)
 
+    def test_valid_json_zone_thresholds_long_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['--zone-thresholds', self.valid_zone_thresholds]
+        args = get_arguments(arguments)
+        self.assertTrue(args.zone_thresholds == ZONE_THRESHOLDS)
+
     def test_invalid_zone_thresholds_argument_provided(self):
         arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-zt', self.valid_json_string]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.invalid_zone_thresholds_message.format(
+            value=self.valid_json_string))
+
+    def test_invalid_zone_thresholds_long_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['--zone-thresholds', self.valid_json_string]
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         self.assertTrue(parsing_error_message == self.invalid_zone_thresholds_message.format(
             value=self.valid_json_string))
@@ -1052,8 +1180,19 @@ class TestSecurityHubQueryFilterArgs(unittest.TestCase):
         args = get_arguments(arguments)
         self.assertTrue(args.security_hub_query_filter == json.loads(self.valid_json_string))
 
+    def test_valid_json_query_filter_long_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['--security-hub-query-filter', self.valid_json_string]
+        args = get_arguments(arguments)
+        self.assertTrue(args.security_hub_query_filter == json.loads(self.valid_json_string))
+
     def test_invalid_json_query_filter_argument_provided(self):
         arguments = MINIMUM_REQUIRED_ARGUMENTS + ['-sf', self.invalid_json_string]
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.invalid_query_json_message.format(
+            value=self.invalid_json_string))
+
+    def test_invalid_json_query_filter_argument_provided(self):
+        arguments = MINIMUM_REQUIRED_ARGUMENTS + ['--security-hub-query-filter', self.invalid_json_string]
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         self.assertTrue(parsing_error_message == self.invalid_query_json_message.format(
             value=self.invalid_json_string))
