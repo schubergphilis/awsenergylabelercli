@@ -37,6 +37,7 @@ import logging
 import os
 import re
 from argparse import ArgumentTypeError
+from pathlib import Path
 
 from schema import SchemaUnexpectedTypeError, SchemaError
 from awsenergylabelerlib import (is_valid_account_id,
@@ -220,3 +221,38 @@ def zone_thresholds_config(value):
         raise ArgumentTypeError(
             f'Provided configuration {value} is an invalid zone thresholds configuration.') from None
     return config
+
+
+class OverridingArgument(argparse.Action):  # pylint: disable=too-few-public-methods
+    """Argument that if set will disable all other arguments that are set as required."""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        # If we get here, it means that the argument is set so any other argument that has been configured as required
+        # will have it's required attribute disabled due to this overriding argument being called.
+        for argument in parser._actions:  # noqa
+            if argument.required:
+                # this will not log as the logger is set up up after the parsing of arguments. Message is left as
+                # documentation and can be turned into a print statement for debugging.
+                LOGGER.info(f'Argument {argument.dest} is required, overriding that to not required due to argument '
+                            f'{self.dest} set as overriding argument which will disable all other required arguments.')
+                argument.required = False
+        setattr(namespace, self.dest, values)
+
+
+def valid_local_file(local_path):
+    """Validates an argparse argument to be an existing local file.
+
+    Args:
+        local_path: The path provided as an argument.
+
+    Returns:
+        The local path if the file exists.
+
+    Raises:
+        ArgumentTypeError: If the file does not exist.
+
+    """
+    path_file = Path(local_path)
+    if not path_file.exists():
+        raise ArgumentTypeError(f'Local file path "{local_path}" provided, does not exist.')
+    return path_file.resolve()

@@ -142,8 +142,6 @@ def main():
                            f'configuration will be reported on the output.')
     if not args.frameworks:
         LOGGER.info('No frameworks have been provided for filtering.')
-    # print(args)
-    # print(sys.argv)
     try:
         print(text2art("AWS Energy Labeler"))
         report_data, exporter_arguments = _get_reporting_arguments(args)

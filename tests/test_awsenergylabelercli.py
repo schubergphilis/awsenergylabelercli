@@ -41,6 +41,8 @@ import os
 import sys
 import unittest
 
+from pathlib import Path
+
 from awsenergylabelercli import get_arguments, get_parser
 from awsenergylabelercli.validators import (character_delimited_list_variable,
                                             environment_variable_boolean,
@@ -629,13 +631,18 @@ class TestAccountIds(unittest.TestCase):
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
-    def test_mutually_exclusive_account_id_with_single_account_arguments(self):
+    def test_mutually_exclusive_allowed_account_id_with_single_account_arguments(self):
         arguments = ['-r', 'eu-west-1', '-a', '123456789012', '-s', '123456789012']
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_with_single_message)
 
     def test_mutually_exclusive_account_id_with_single_account_long_arguments(self):
         arguments = ['-r', 'eu-west-1', '-a', '123456789012', '--single-account-id', '123456789012']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_with_single_message)
+
+    def test_mutually_exclusive_denied_account_id_with_single_account_arguments(self):
+        arguments = ['-r', 'eu-west-1', '-d', '123456789012', '-s', '123456789012']
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_with_single_message)
 
@@ -1209,3 +1216,59 @@ class TestSecurityHubQueryFilterArgs(unittest.TestCase):
         del os.environ['AWS_LABELER_SECURITY_HUB_QUERY_FILTER']
         self.assertTrue(parsing_error_message == self.invalid_query_json_message.format(
             value=self.invalid_json_string))
+
+
+class TestValidatingFile(unittest.TestCase):
+
+    def setUp(self):
+        self.non_existent_file_message = ('argument --validate-metadata-file/-v: Local file path "{filepath}" provided,'
+                                          ' does not exist.')
+        self.invalid_json_file_message = 'Local file "{filepath}" provided is not a valid json file!'
+
+    def test_non_existent_local_file_provided_as_argument(self):
+        not_existent_file = 'bobs_file'
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-v', not_existent_file])
+        self.assertTrue(parsing_error_message == self.non_existent_file_message.format(filepath=not_existent_file))
+
+    def test_non_existent_local_file_provided_as_long_argument(self):
+        not_existent_file = 'bobs_file'
+        parsing_error_message = get_parsing_error_message(get_arguments, ['--validate-metadata-file',
+                                                                          not_existent_file])
+        self.assertTrue(parsing_error_message == self.non_existent_file_message.format(filepath=not_existent_file))
+
+    def test_invalid_json_file_provided_as_argument(self):
+        invalid_json_file = str(Path('tests/fixtures/garbage.json').resolve())
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-v', invalid_json_file])
+        self.assertTrue(parsing_error_message == self.invalid_json_file_message.format(filepath=invalid_json_file))
+
+    def test_invalid_json_file_provided_as_long_argument(self):
+        invalid_json_file = str(Path('tests/fixtures/garbage.json').resolve())
+        parsing_error_message = get_parsing_error_message(get_arguments, ['--validate-metadata-file',
+                                                                          invalid_json_file])
+        self.invalid_json_file_message.format(filepath=invalid_json_file)
+        self.assertTrue(parsing_error_message == self.invalid_json_file_message.format(filepath=invalid_json_file))
+
+    def test_invalid_hashed_json_local_file_provided_as_argument(self):
+        invalid_hashed_file = 'tests/fixtures/metadata_invalid.json'
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-v', invalid_hashed_file])
+        print(parsing_error_message)
+        self.assertTrue('does not match the calculated one' in parsing_error_message)
+
+    def test_invalid_hashed_json_local_file_provided_as_long_argument(self):
+        invalid_hashed_file = 'tests/fixtures/metadata_invalid.json'
+        parsing_error_message = get_parsing_error_message(get_arguments, ['--validate-metadata-file',
+                                                                          invalid_hashed_file])
+        print(parsing_error_message)
+        self.assertTrue('does not match the calculated one' in parsing_error_message)
+
+    def test_valid_hashed_json_local_file_provided_as_argument(self):
+        valid_hashed_local_file = 'tests/fixtures/metadata_valid.json'
+        with self.assertRaises(SystemExit) as cm:
+            get_arguments(['-v', valid_hashed_local_file])
+        self.assertEqual(cm.exception.code, 0)
+
+    def test_valid_hashed_json_local_file_provided_as_long_argument(self):
+        valid_hashed_local_file = 'tests/fixtures/metadata_valid.json'
+        with self.assertRaises(SystemExit) as cm:
+            get_arguments(['--validate-metadata-file', valid_hashed_local_file])
+        self.assertEqual(cm.exception.code, 0)
