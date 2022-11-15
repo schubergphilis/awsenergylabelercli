@@ -220,7 +220,8 @@ def get_parser():
                         '-v',
                         action=OverridingArgument,
                         type=valid_local_file,
-                        help='Validates a metadata file.')
+                        help='Validates a metadata file. Warning, if this argument is set any other argument is '
+                             'effectively disregarded and only the file provided is processed.')
     parser.set_defaults(export_all=True)
     return parser
 
