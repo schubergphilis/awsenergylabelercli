@@ -240,6 +240,18 @@ class OverridingArgument(argparse.Action):  # pylint: disable=too-few-public-met
 
 
 def valid_local_file(local_path):
+    """Validates an argparse argument to be an existing local file.
+
+    Args:
+        local_path: The path provided as an argument.
+
+    Returns:
+        The local path if the file exists.
+
+    Raises:
+        ArgumentTypeError: If the file does not exist.
+
+    """
     if local_path is None:
         return None
     path_file = Path(local_path)
