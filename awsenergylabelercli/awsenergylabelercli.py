@@ -225,7 +225,6 @@ def get_parser():
     return parser
 
 
-
 def calculate_file_hash(binary_contents):
     """Calculates a hex digest of binary contents.
 
@@ -263,9 +262,7 @@ def validate_metadata_file(file_path, parser):
             del data['hash']
             calculated_hash = calculate_file_hash(json.dumps(data).encode('utf-8'))
             if recorded_hash == calculated_hash:
-                print(f'The file {file_path} seems a valid metadata file.')
-                status_code = 0
-                return status_code
+                parser.exit(0, f'The file {file_path} seems a valid metadata file.')
     except (ValueError, AttributeError):
         parser.error(f'Local file "{file_path}" provided is not a valid json file!')
     parser.error(f'The recorded hash {recorded_hash} does not match the calculated one {calculated_hash}!')
