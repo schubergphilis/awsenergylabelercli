@@ -35,6 +35,7 @@ import argparse
 import json
 import logging
 import logging.config
+import hashlib
 import os
 
 import coloredlogs
@@ -224,6 +225,52 @@ def get_parser():
     return parser
 
 
+
+def calculate_file_hash(binary_contents):
+    """Calculates a hex digest of binary contents.
+
+    Args:
+        binary_contents: The binary object to calculate the hex digest of.
+
+    Returns:
+        The calculated hex digest of the binary object.
+
+    """
+    hash_object = hashlib.sha256()
+    hash_object.update(binary_contents)
+    return hash_object.hexdigest()
+
+
+def validate_metadata_file(file_path, parser):
+    """Validates a provided local metadata file by looking into its contents.
+
+    Args:
+        file_path: The local file path of the file to validate for.
+
+    Returns:
+        0 on success
+
+    Raises:
+        parser.error on failure.
+
+    """
+    try:
+        with open(file_path, 'r') as ifile:
+            LOGGER.debug(f'Received local file "{file_path}" to validate.')
+            contents = ifile.read()
+            data = json.loads(contents)
+            recorded_hash = data.get('hash')
+            del data['hash']
+            calculated_hash = calculate_file_hash(json.dumps(data).encode('utf-8'))
+            if recorded_hash == calculated_hash:
+                print(f'The file {file_path} seems a valid metadata file.')
+                status_code = 0
+                return status_code
+    except (ValueError, AttributeError):
+        parser.error(f'Local file "{file_path}" provided is not a valid json file!')
+    parser.error(f'The recorded hash {recorded_hash} does not match the calculated one {calculated_hash}!')
+
+
 def get_arguments(arguments=None):  # noqa: MC0001
     """
     Gets us the cli arguments.
@@ -233,10 +280,9 @@ def get_arguments(arguments=None):  # noqa: MC0001
     parser = get_parser()
     args = parser.parse_args(arguments)
     if args.validate_metadata_file:
-        # if overriding argument is set then we do not check any other arguments and we return the parsed arguments as
-        # is. It is the responsibility of the caller to act accordingly so main should check for this argument early and
-        # quit after managing it.
-        return args
+        # if overriding argument is set then we do not check any other arguments and we exit straight
+        # after validating the argument
+        raise SystemExit(validate_metadata_file(args.validate_metadata_file, parser))
     # Since mutual exclusive cannot work with environment variables we need to check explicitly for all pairs of
     # mutual relations that are not allowed.
     if all([args.allowed_account_ids, args.denied_account_ids]):

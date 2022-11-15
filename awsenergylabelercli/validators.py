@@ -233,8 +233,8 @@ class OverridingArgument(argparse.Action):  # pylint: disable=too-few-public-met
             if argument.required:
                 # this will not log as the logger is set up up after the parsing of arguments. Message is left as
                 # documentation and can be turned into a print statement for debugging.
-                LOGGER.error(f'Argument {argument.dest} is required, overriding that to not required due to argument '
-                             f'{self.dest} set as overriding argument which will disable all other required arguments.')
+                LOGGER.info(f'Argument {argument.dest} is required, overriding that to not required due to argument '
+                            f'{self.dest} set as overriding argument which will disable all other required arguments.')
                 argument.required = False
         setattr(namespace, self.dest, values)
 
@@ -252,8 +252,6 @@ def valid_local_file(local_path):
         ArgumentTypeError: If the file does not exist.
 
     """
-    if local_path is None:
-        return None
     path_file = Path(local_path)
     if not path_file.exists():
         raise ArgumentTypeError(f'Local file path "{local_path}" provided, does not exist.')

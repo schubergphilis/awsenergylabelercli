@@ -31,7 +31,6 @@ Main code for aws_energy_labeler_cli.
 
 """
 import datetime
-import hashlib
 import json
 import logging
 
@@ -132,57 +131,10 @@ def report(report_data, to_json=False):
     return None
 
 
-def calculate_file_hash(binary_contents):
-    """Calculates a hex digest of binary contents.
-
-    Args:
-        binary_contents: The binary object to calculate the hex digest of.
-
-    Returns:
-        The calculated hex digest of the binary object.
-
-    """
-    hash_object = hashlib.sha256()
-    hash_object.update(binary_contents)
-    return hash_object.hexdigest()
-
-
-def validate_metadata_file(file_path):
-    """Validates a provided local metadata file by looking into its contents.
-
-    Args:
-        file_path: The local file path of the file to validate for.
-
-    Returns:
-        0 on success, 1 on failure.
-
-    """
-    status_code = 1  # we define failure as default and we only override on success.
-    try:
-        with open(file_path, 'r') as ifile:
-            LOGGER.debug(f'Received local file "{file_path}" to validate.')
-            contents = ifile.read()
-            data = json.loads(contents)
-            recorded_hash = data.get('hash')
-            del data['hash']
-            calculated_hash = calculate_file_hash(json.dumps(data).encode('utf-8'))
-            if recorded_hash == calculated_hash:
-                LOGGER.info(f'The file {file_path} seems a valid metadata file.')
-                status_code = 0
-                return status_code
-    except (ValueError, AttributeError):
-        LOGGER.exception(f'Local file "{file_path}" provided is not a valid json file!')
-        return status_code
-    LOGGER.error(f'The recorded hash {recorded_hash} does not match the calculated one {calculated_hash}!')
-    return status_code
-
-
 def main():
     """Main method."""
     args = get_arguments()
     setup_logging(args.log_level, args.logger_config)
-    if args.validate_metadata_file:
-        return validate_metadata_file(args.validate_metadata_file)
     logging.getLogger('botocore').setLevel(logging.ERROR)
     for entity in ['account', 'zone']:
         if getattr(args, f'{entity}_thresholds'):
