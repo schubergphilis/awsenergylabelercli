@@ -37,6 +37,7 @@ import logging
 import os
 import re
 from argparse import ArgumentTypeError
+from pathlib import Path
 
 from schema import SchemaUnexpectedTypeError, SchemaError
 from awsenergylabelerlib import (is_valid_account_id,
@@ -235,4 +236,13 @@ class OverridingArgument(argparse.Action):  # pylint: disable=too-few-public-met
                 LOGGER.error(f'Argument {argument.dest} is required, overriding that to not required due to argument '
                              f'{self.dest} set as overriding argument which will disable all other required arguments.')
                 argument.required = False
-        setattr(namespace, self.dest, True)
+        setattr(namespace, self.dest, values)
+
+
+def valid_local_file(local_path):
+    if local_path is None:
+        return None
+    path_file = Path(local_path)
+    if not path_file.exists():
+        raise ArgumentTypeError(f'Local file path "{local_path}" provided, does not exist.')
+    return path_file.resolve()

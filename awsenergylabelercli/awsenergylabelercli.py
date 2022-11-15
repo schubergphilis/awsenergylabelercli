@@ -67,6 +67,7 @@ from .validators import (account_thresholds_config,
                          json_string,
                          positive_integer,
                          security_hub_region,
+                         valid_local_file,
                          zone_thresholds_config,
                          OverridingArgument)
 
@@ -217,7 +218,7 @@ def get_parser():
     parser.add_argument('--validate-metadata-file',
                         '-v',
                         action=OverridingArgument,
-                        nargs=0,
+                        type=valid_local_file,
                         help='Validates a metadata file.')
     parser.set_defaults(export_all=True)
     return parser

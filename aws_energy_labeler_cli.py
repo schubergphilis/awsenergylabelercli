@@ -31,6 +31,7 @@ Main code for aws_energy_labeler_cli.
 
 """
 import datetime
+import hashlib
 import json
 import logging
 
@@ -130,8 +131,33 @@ def report(report_data, to_json=False):
     print(table.table)
     return None
 
+
+def calculate_file_hash(binary_contents):
+    hash = hashlib.sha256()
+    hash.update(binary_contents)
+    return hash.hexdigest()
+
+
 def validate_metadata_file(file_path):
-    return 0
+    status_code = 0
+    try:
+        with open(file_path, 'r') as ifile:
+            LOGGER.warning(f'Received local file "{file_path}" to validate.')
+            contents = ifile.read()
+            data = json.loads(contents)
+            recorded_hash = data.get('hash')
+            del data['hash']
+            calculated_hash = calculate_file_hash(json.dumps(data).encode('utf-8'))
+            if recorded_hash == calculated_hash:
+                LOGGER.info(f'The file {file_path} seems a valid metadata file.')
+                return status_code
+    except (ValueError, AttributeError):
+        LOGGER.exception(f'Local file "{file_path}" provided is not a valid json file!')
+        status_code = 1
+        return status_code
+    status_code = 1
+    LOGGER.error(f'The recorded hash {recorded_hash} does not match the calculated one {calculated_hash}')
+    return status_code
 
 
 def main():
@@ -139,10 +165,7 @@ def main():
     args = get_arguments()
     setup_logging(args.log_level, args.logger_config)
     if args.validate_metadata_file:
-        print('validating metadata file and then exiting')
-        file_path='d'
-        return validate_metadata_file(file_path)
-    print(args)
+        return validate_metadata_file(args.validate_metadata_file)
     logging.getLogger('botocore').setLevel(logging.ERROR)
     for entity in ['account', 'zone']:
         if getattr(args, f'{entity}_thresholds'):
@@ -150,8 +173,6 @@ def main():
                            f'configuration will be reported on the output.')
     if not args.frameworks:
         LOGGER.info('No frameworks have been provided for filtering.')
-    # print(args)
-    # print(sys.argv)
     try:
         print(text2art("AWS Energy Labeler"))
         report_data, exporter_arguments = _get_reporting_arguments(args)
