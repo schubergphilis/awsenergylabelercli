@@ -23,7 +23,7 @@ toml = "~=0.10.0"
 [packages]
 
 coloredlogs = "~=10.0"
-awsenergylabelerlib = "~=3.0.0"
+awsenergylabelerlib = {path = "../awsenergylabelerlib", editable = true}
 yaspin = "~=2.1.0"
 terminaltables = "~=3.1.0"
 art = "~=5.3"

@@ -44,6 +44,7 @@ from awsenergylabelercli import (get_arguments,
                                  setup_logging,
                                  get_zone_reporting_data,
                                  get_account_reporting_data)
+from awsenergylabelercli.entities import MetadataEntry, Metadata
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -61,32 +62,61 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
-def enrich_default_report_data(report_data, args, start_run_time):
-    """Enriches the interactive report data with default metadata.
-
-    Technically the data is mutated during the function so returning it is not needed.
+def create_execution_metadata(args, start_run_time):
+    """Creates the execution metadata.
 
     Args:
-        report_data: The report_data to mutate.
-        args: The args of the execution.
+        args: The arguments provided by argparse as set by the user.
         start_run_time: The start run time of the execution to calculate the total duration.
 
     Returns:
-        The mutated report_data.
+        The calculated metadata.
 
     """
-    report_data.append(['Default Account Thresholds Overwritten:', bool(args.account_thresholds)])
-    if any([args.organizations_zone_name, args.audit_zone_name]):
-        report_data.append(['Default Zone Thresholds Overwritten:', bool(args.zone_thresholds)])
-    report_data.append(['Default Security Hub Query Filter Overwritten:', bool(args.security_hub_query_filter)])
+    metadata = Metadata()
+    metadata.add_entry(MetadataEntry(title='Default Account Thresholds Overwritten:',
+                                     value=bool(args.account_thresholds),
+                                     is_report_entry=True))
+    if args.account_thresholds:
+        metadata.add_entry(MetadataEntry(title='Account Thresholds Provided:',
+                                         value=args.account_thresholds,
+                                         is_report_entry=False))
+    metadata.add_entry(MetadataEntry(title='Default Zone Thresholds Overwritten:',
+                                     value=bool(args.zone_thresholds),
+                                     is_report_entry=True))
+    if args.zone_thresholds:
+        metadata.add_entry(MetadataEntry(title='Zone Thresholds Provided:',
+                                         value=args.zone_thresholds,
+                                         is_report_entry=False))
+    metadata.add_entry(MetadataEntry(title='Default Security Hub Query Filter Overwritten:',
+                                     value=bool(args.security_hub_query_filter),
+                                     is_report_entry=True))
+    if args.security_hub_query_filter:
+        metadata.add_entry(MetadataEntry(title='Security Hub Query Filter Provided:',
+                                         value=args.security_hub_query_filter,
+                                         is_report_entry=False))
+
     if set(args.frameworks) != set(DEFAULT_SECURITY_HUB_FRAMEWORKS):
-        report_data.append(['Default Frameworks Overwritten:', True])
+        metadata.add_entry(MetadataEntry(title='Default Frameworks Overwritten:',
+                                         value=True,
+                                         is_report_entry=True))
+        metadata.add_entry(MetadataEntry(title='Frameworks Provided:',
+                                         value=args.frameworks,
+                                         is_report_entry=False))
+    metadata.add_entry(MetadataEntry(title='Library Version:',
+                                     value=lib_version,
+                                     is_report_entry=True))
+    metadata.add_entry(MetadataEntry(title='Cli Version:',
+                                     value=cli_version,
+                                     is_report_entry=True))
     end_run_time = datetime.datetime.now()
-    report_data.extend([['Library Version:', lib_version],
-                        ['Cli Version:', cli_version],
-                        ['Date and time of end of execution:', str(end_run_time)],
-                        ['Duration of run:', str(end_run_time - start_run_time)]])
-    return report_data
+    metadata.add_entry(MetadataEntry(title='Date and time of end of execution:',
+                                     value=str(end_run_time),
+                                     is_report_entry=True))
+    metadata.add_entry(MetadataEntry(title='Duration of run:',
+                                     value=str(end_run_time - start_run_time),
+                                     is_report_entry=True))
+    return metadata
 
 
 def _get_reporting_arguments(args):
@@ -114,7 +144,9 @@ def _get_reporting_arguments(args):
                                  'zone_type': zone_type,
                                  'zone_thresholds': args.zone_thresholds})
     report_data, exporter_arguments = get_reporting_data(**method_arguments)
-    report_data = enrich_default_report_data(report_data, args, start_run_time)
+    execution_metadata = create_execution_metadata(args, start_run_time)
+    report_data.extend(execution_metadata.report_table)
+    exporter_arguments.update({'metadata': execution_metadata.data})
     return report_data, exporter_arguments
 
 

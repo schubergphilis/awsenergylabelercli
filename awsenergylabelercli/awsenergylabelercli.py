@@ -281,7 +281,7 @@ def get_arguments(arguments=None):  # noqa: MC0001
     if args.validate_metadata_file:
         # if overriding argument is set then we do not check any other arguments and we exit straight
         # after validating the argument
-        raise SystemExit(validate_metadata_file(args.validate_metadata_file, parser))
+        raise validate_metadata_file(args.validate_metadata_file, parser)
     # Since mutual exclusive cannot work with environment variables we need to check explicitly for all pairs of
     # mutual relations that are not allowed.
     if all([args.allowed_account_ids, args.denied_account_ids]):
@@ -417,8 +417,6 @@ def get_zone_reporting_data(zone_name,
         report_data, exporter_arguments
 
     """
-    # report_closed_findings_days,
-    # report_suppressed_findings,
     labeler = EnergyLabeler(zone_name=zone_name,
                             region=region,
                             account_thresholds=account_thresholds or ACCOUNT_THRESHOLDS,
