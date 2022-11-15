@@ -245,6 +245,7 @@ def validate_metadata_file(file_path, parser):
 
     Args:
         file_path: The local file path of the file to validate for.
+        parser: The parser to use the appropriate exit methods.
 
     Returns:
         parser.exit(0) on success
