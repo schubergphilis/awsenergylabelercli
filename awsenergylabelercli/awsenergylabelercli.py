@@ -247,7 +247,7 @@ def validate_metadata_file(file_path, parser):
         file_path: The local file path of the file to validate for.
 
     Returns:
-        0 on success
+        parser.exit(0) on success
 
     Raises:
         parser.error on failure.
