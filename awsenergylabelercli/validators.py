@@ -220,3 +220,19 @@ def zone_thresholds_config(value):
         raise ArgumentTypeError(
             f'Provided configuration {value} is an invalid zone thresholds configuration.') from None
     return config
+
+
+class OverridingArgument(argparse.Action):  # pylint: disable=too-few-public-methods
+    """Argument that if set will disable all other arguments that are set as required."""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        # If we get here, it means that the argument is set so any other argument that has been configured as required
+        # will have it's required attribute disabled due to this overriding argument being called.
+        for argument in parser._actions:  # noqa
+            if argument.required:
+                # this will not log as the logger is set up up after the parsing of arguments. Message is left as
+                # documentation and can be turned into a print statement for debugging.
+                LOGGER.error(f'Argument {argument.dest} is required, overriding that to not required due to argument '
+                             f'{self.dest} set as overriding argument which will disable all other required arguments.')
+                argument.required = False
+        setattr(namespace, self.dest, True)

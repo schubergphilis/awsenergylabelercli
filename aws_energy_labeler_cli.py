@@ -130,11 +130,19 @@ def report(report_data, to_json=False):
     print(table.table)
     return None
 
+def validate_metadata_file(file_path):
+    return 0
+
 
 def main():
     """Main method."""
     args = get_arguments()
     setup_logging(args.log_level, args.logger_config)
+    if args.validate_metadata_file:
+        print('validating metadata file and then exiting')
+        file_path='d'
+        return validate_metadata_file(file_path)
+    print(args)
     logging.getLogger('botocore').setLevel(logging.ERROR)
     for entity in ['account', 'zone']:
         if getattr(args, f'{entity}_thresholds'):

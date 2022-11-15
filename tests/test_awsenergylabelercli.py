@@ -629,13 +629,18 @@ class TestAccountIds(unittest.TestCase):
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_message)
 
-    def test_mutually_exclusive_account_id_with_single_account_arguments(self):
+    def test_mutually_exclusive_allowed_account_id_with_single_account_arguments(self):
         arguments = ['-r', 'eu-west-1', '-a', '123456789012', '-s', '123456789012']
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_with_single_message)
 
     def test_mutually_exclusive_account_id_with_single_account_long_arguments(self):
         arguments = ['-r', 'eu-west-1', '-a', '123456789012', '--single-account-id', '123456789012']
+        parsing_error_message = get_parsing_error_message(get_arguments, arguments)
+        self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_with_single_message)
+
+    def test_mutually_exclusive_denied_account_id_with_single_account_arguments(self):
+        arguments = ['-r', 'eu-west-1', '-d', '123456789012', '-s', '123456789012']
         parsing_error_message = get_parsing_error_message(get_arguments, arguments)
         self.assertTrue(parsing_error_message == self.mutually_exclusive_arguments_with_single_message)
 

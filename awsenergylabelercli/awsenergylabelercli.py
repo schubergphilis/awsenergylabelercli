@@ -67,7 +67,8 @@ from .validators import (account_thresholds_config,
                          json_string,
                          positive_integer,
                          security_hub_region,
-                         zone_thresholds_config)
+                         zone_thresholds_config,
+                         OverridingArgument)
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -213,6 +214,11 @@ def get_parser():
                         type=json_string,
                         default=os.environ.get('AWS_LABELER_SECURITY_HUB_QUERY_FILTER'),
                         help='If set the zone thresholds will be used instead of the default ones.')
+    parser.add_argument('--validate-metadata-file',
+                        '-v',
+                        action=OverridingArgument,
+                        nargs=0,
+                        help='Validates a metadata file.')
     parser.set_defaults(export_all=True)
     return parser
 
@@ -225,6 +231,11 @@ def get_arguments(arguments=None):  # noqa: MC0001
     """
     parser = get_parser()
     args = parser.parse_args(arguments)
+    if args.validate_metadata_file:
+        # if overriding argument is set then we do not check any other arguments and we return the parsed arguments as
+        # is. It is the responsibility of the caller to act accordingly so main should check for this argument early and
+        # quit after managing it.
+        return args
     # Since mutual exclusive cannot work with environment variables we need to check explicitly for all pairs of
     # mutual relations that are not allowed.
     if all([args.allowed_account_ids, args.denied_account_ids]):
