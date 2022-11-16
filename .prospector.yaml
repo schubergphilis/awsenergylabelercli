@@ -11,3 +11,5 @@ ignore-paths:
   - _CI
   - build
   - docs
+  - dist
+  - .eggs
