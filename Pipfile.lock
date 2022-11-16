@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "eddf0a7c47d9efad8e3bf768faac1fff30edfbf9da8e0aa046a7d0e93011360a"
+            "sha256": "28e58d5d403964ba1e7fe9785a490328f1b6501e79c8cfbfe412d6c36e52d516"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -25,8 +25,12 @@
             "version": "==5.7"
         },
         "awsenergylabelerlib": {
-            "editable": true,
-            "path": "./../awsenergylabelerlib"
+            "hashes": [
+                "sha256:9875e58b4f5b682a0bc5f0db0c27ea3a5f863f00496de5b02976edd749ff8ee0",
+                "sha256:b34d104eed2e48f1301e0ffba656369c0c05ca0fea22fe7fa50c5261fde229f7"
+            ],
+            "index": "pypi",
+            "version": "==3.1.0"
         },
         "boto3": {
             "hashes": [
