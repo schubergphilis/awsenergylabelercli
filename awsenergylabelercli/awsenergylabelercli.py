@@ -513,7 +513,8 @@ def get_account_reporting_data(account_id,
     account.calculate_energy_label(security_hub_findings)
     report_data = [['Account ID:', account.id],
                    ['Account Security Score:', account.energy_label.label],
-                   ['Number Of Critical & High Findings:', account.energy_label.number_of_critical_high_findings],
+                   ['Number Of Critical Findings:', account.energy_label.number_of_critical_findings],
+                   ['Number Of High Findings:', account.energy_label.number_of_high_findings],
                    ['Number Of Medium Findings:', account.energy_label.number_of_medium_findings],
                    ['Number Of Low Findings:', account.energy_label.number_of_low_findings],
                    ['Max Days Open:', account.energy_label.max_days_open]]
