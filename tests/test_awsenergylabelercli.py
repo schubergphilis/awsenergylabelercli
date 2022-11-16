@@ -1221,13 +1221,13 @@ class TestSecurityHubQueryFilterArgs(unittest.TestCase):
 class TestValidatingFile(unittest.TestCase):
 
     def setUp(self):
-        self.non_existent_file_message = ('argument --validate-metadata-file/-v: Local file path "{filepath}" provided,'
-                                          ' does not exist.')
+        self.non_existent_file_message = ('argument --validate-metadata-file/-vm: Local file path "{filepath}" '
+                                          'provided, does not exist.')
         self.invalid_json_file_message = 'Local file "{filepath}" provided is not a valid json file!'
 
     def test_non_existent_local_file_provided_as_argument(self):
         not_existent_file = 'bobs_file'
-        parsing_error_message = get_parsing_error_message(get_arguments, ['-v', not_existent_file])
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-vm', not_existent_file])
         self.assertTrue(parsing_error_message == self.non_existent_file_message.format(filepath=not_existent_file))
 
     def test_non_existent_local_file_provided_as_long_argument(self):
@@ -1238,7 +1238,7 @@ class TestValidatingFile(unittest.TestCase):
 
     def test_invalid_json_file_provided_as_argument(self):
         invalid_json_file = str(Path('tests/fixtures/garbage.json').resolve())
-        parsing_error_message = get_parsing_error_message(get_arguments, ['-v', invalid_json_file])
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-vm', invalid_json_file])
         self.assertTrue(parsing_error_message == self.invalid_json_file_message.format(filepath=invalid_json_file))
 
     def test_invalid_json_file_provided_as_long_argument(self):
@@ -1250,25 +1250,36 @@ class TestValidatingFile(unittest.TestCase):
 
     def test_invalid_hashed_json_local_file_provided_as_argument(self):
         invalid_hashed_file = 'tests/fixtures/metadata_invalid.json'
-        parsing_error_message = get_parsing_error_message(get_arguments, ['-v', invalid_hashed_file])
-        print(parsing_error_message)
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-vm', invalid_hashed_file])
         self.assertTrue('does not match the calculated one' in parsing_error_message)
 
     def test_invalid_hashed_json_local_file_provided_as_long_argument(self):
         invalid_hashed_file = 'tests/fixtures/metadata_invalid.json'
         parsing_error_message = get_parsing_error_message(get_arguments, ['--validate-metadata-file',
                                                                           invalid_hashed_file])
-        print(parsing_error_message)
         self.assertTrue('does not match the calculated one' in parsing_error_message)
 
     def test_valid_hashed_json_local_file_provided_as_argument(self):
         valid_hashed_local_file = 'tests/fixtures/metadata_valid.json'
         with self.assertRaises(SystemExit) as cm:
-            get_arguments(['-v', valid_hashed_local_file])
+            get_arguments(['-vm', valid_hashed_local_file])
         self.assertEqual(cm.exception.code, 0)
 
     def test_valid_hashed_json_local_file_provided_as_long_argument(self):
         valid_hashed_local_file = 'tests/fixtures/metadata_valid.json'
         with self.assertRaises(SystemExit) as cm:
             get_arguments(['--validate-metadata-file', valid_hashed_local_file])
+        self.assertEqual(cm.exception.code, 0)
+
+
+class TestVersion(unittest.TestCase):
+
+    def test_version_provided_as_argument(self):
+        with self.assertRaises(SystemExit) as cm:
+            get_arguments(['-v'])
+        self.assertEqual(cm.exception.code, 0)
+
+    def test_version_provided_as_long_argument(self):
+        with self.assertRaises(SystemExit) as cm:
+            get_arguments(['--version'])
         self.assertEqual(cm.exception.code, 0)

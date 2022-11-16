@@ -58,6 +58,7 @@ from awsenergylabelerlib import (validate_regions,
                                  InvalidAccountListProvided,
                                  InvalidRegionListProvided)
 
+from ._version import __version__ as cli_version
 from .awsenergylabelercliexceptions import MissingRequiredArguments, MutuallyExclusiveArguments
 from .validators import (account_thresholds_config,
                          aws_account_id,
@@ -217,11 +218,16 @@ def get_parser():
                         default=os.environ.get('AWS_LABELER_SECURITY_HUB_QUERY_FILTER'),
                         help='If set the zone thresholds will be used instead of the default ones.')
     parser.add_argument('--validate-metadata-file',
-                        '-v',
+                        '-vm',
                         action=OverridingArgument,
                         type=valid_local_file,
                         help='Validates a metadata file. Warning, if this argument is set any other argument is '
                              'effectively disregarded and only the file provided is processed.')
+    parser.add_argument('--version',
+                        '-v',
+                        action=OverridingArgument,
+                        nargs=0,
+                        help='Prints the version of the tool.')
     parser.set_defaults(export_all=True)
     return parser
 
@@ -280,6 +286,8 @@ def get_arguments(arguments=None):  # noqa: MC0001
     """
     parser = get_parser()
     args = parser.parse_args(arguments)
+    if args.version:
+        parser.exit(0, cli_version)
     if args.validate_metadata_file:
         # if overriding argument is set then we do not check any other arguments and we exit straight
         # after validating the argument

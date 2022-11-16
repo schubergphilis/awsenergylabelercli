@@ -236,6 +236,9 @@ class OverridingArgument(argparse.Action):  # pylint: disable=too-few-public-met
                 LOGGER.info(f'Argument {argument.dest} is required, overriding that to not required due to argument '
                             f'{self.dest} set as overriding argument which will disable all other required arguments.')
                 argument.required = False
+        # if we get here there has been an argument provided so to support flag arguments if no actual value has been
+        # provided we set the argument to True. Assumption is that the argument has been configured with nargs=0.
+        values = True if not values else values
         setattr(namespace, self.dest, values)
 
 
