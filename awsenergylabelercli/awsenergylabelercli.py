@@ -500,7 +500,7 @@ def get_account_reporting_data(account_id,
         report_data, exporter_arguments
 
     """
-    account = AwsAccount(account_id, 'Not Retrieved', account_thresholds or ACCOUNT_THRESHOLDS)
+    account = AwsAccount(account_id, account_thresholds or ACCOUNT_THRESHOLDS, 'Not Retrieved')
     security_hub = SecurityHub(region=region,
                                allowed_regions=allowed_regions,
                                denied_regions=denied_regions)
