@@ -40,10 +40,11 @@ from awsenergylabelerlib import DataExporter, DEFAULT_SECURITY_HUB_FRAMEWORKS
 from awsenergylabelerlib._version import __version__ as lib_version
 from awsenergylabelercli._version import __version__ as cli_version
 
-from awsenergylabelercli import (get_arguments,
-                                 setup_logging,
+from awsenergylabelercli import (calculate_file_hash,
+                                 get_account_reporting_data,
+                                 get_arguments,
                                  get_zone_reporting_data,
-                                 get_account_reporting_data)
+                                 setup_logging)
 from awsenergylabelercli.entities import MetadataEntry, Metadata
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
@@ -116,6 +117,9 @@ def create_execution_metadata(args, start_run_time):
     metadata.add_entry(MetadataEntry(title='Duration of run:',
                                      value=str(end_run_time - start_run_time),
                                      is_report_entry=True))
+    metadata.add_entry(MetadataEntry(title='Hash:',
+                                     value=calculate_file_hash(json.dumps(metadata.data).encode('utf-8')),
+                                     is_report_entry=False))
     return metadata
 
 

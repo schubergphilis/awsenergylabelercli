@@ -260,8 +260,10 @@ def validate_metadata_file(file_path, parser):
             LOGGER.debug(f'Received local file "{file_path}" to validate.')
             contents = ifile.read()
             data = json.loads(contents)
-            recorded_hash = data.get('hash')
-            del data['hash']
+            recorded_hash = data.get('Hash:')
+            if not recorded_hash:
+                parser.error(f'Local file "{file_path}" does not have a "Hash:" entry!')
+            del data['Hash:']
             calculated_hash = calculate_file_hash(json.dumps(data).encode('utf-8'))
             if recorded_hash == calculated_hash:
                 parser.exit(0, f'The file {file_path} seems a valid metadata file.')
