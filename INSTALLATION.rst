@@ -15,6 +15,6 @@ Or, if you are using pipenv::
 
     $ pipenv install awsenergylabelercli
 
-Or, if you are using pipx::
+Or, if you are using pipx (Recommended way)::
 
     $ pipx install awsenergylabelercli
