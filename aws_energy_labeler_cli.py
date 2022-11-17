@@ -63,12 +63,11 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
-def create_execution_metadata(args, start_run_time):
+def create_execution_metadata(args):
     """Creates the execution metadata.
 
     Args:
         args: The arguments provided by argparse as set by the user.
-        start_run_time: The start run time of the execution to calculate the total duration.
 
     Returns:
         The calculated metadata.
@@ -110,20 +109,12 @@ def create_execution_metadata(args, start_run_time):
     metadata.add_entry(MetadataEntry(title='Cli Version:',
                                      value=cli_version,
                                      is_report_entry=True))
-    end_run_time = datetime.datetime.now()
-    metadata.add_entry(MetadataEntry(title='Date and time of end of execution:',
-                                     value=str(end_run_time),
-                                     is_report_entry=True))
-    metadata.add_entry(MetadataEntry(title='Duration of run:',
-                                     value=str(end_run_time - start_run_time),
-                                     is_report_entry=True))
-    metadata.add_entry(MetadataEntry(title='Hash:',
-                                     value=calculate_file_hash(json.dumps(metadata.data).encode('utf-8')),
-                                     is_report_entry=False))
     return metadata
 
 
 def _get_reporting_arguments(args):
+    start_run_time = datetime.datetime.now()
+    execution_metadata = create_execution_metadata(args)
     method_arguments = {'region': args.region,
                         'frameworks': args.frameworks,
                         'allowed_regions': args.allowed_regions,
@@ -133,8 +124,8 @@ def _get_reporting_arguments(args):
                         'account_thresholds': args.account_thresholds,
                         'export_all_data_flag': args.export_all,
                         'security_hub_query_filter': args.security_hub_query_filter,
-                        'log_level': args.log_level}
-    start_run_time = datetime.datetime.now()
+                        'log_level': args.log_level,
+                        'metadata': execution_metadata}
     if args.single_account_id:
         get_reporting_data = get_account_reporting_data
         method_arguments.update({'account_id': args.single_account_id})
@@ -148,8 +139,19 @@ def _get_reporting_arguments(args):
                                  'zone_type': zone_type,
                                  'zone_thresholds': args.zone_thresholds})
     report_data, exporter_arguments = get_reporting_data(**method_arguments)
-    execution_metadata = create_execution_metadata(args, start_run_time)
+    execution_metadata = exporter_arguments.get('metadata')
     report_data.extend(execution_metadata.report_table)
+    end_run_time = datetime.datetime.now()
+    execution_metadata.add_entry(MetadataEntry(title='Date and time of end of execution:',
+                                               value=str(end_run_time),
+                                               is_report_entry=True))
+    execution_metadata.add_entry(MetadataEntry(title='Duration of run:',
+                                               value=str(end_run_time - start_run_time),
+                                               is_report_entry=True))
+    execution_metadata.add_entry(MetadataEntry(title='Hash:',
+                                               value=calculate_file_hash(
+                                                   json.dumps(execution_metadata.data).encode('utf-8')),
+                                               is_report_entry=False))
     exporter_arguments.update({'metadata': execution_metadata.data})
     return report_data, exporter_arguments
 
