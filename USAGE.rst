@@ -97,15 +97,26 @@ Usage
                             suppressed findings
       --account-thresholds ACCOUNT_THRESHOLDS, -at ACCOUNT_THRESHOLDS
                             If set the account thresholds will be used instead of
-                            the default ones.
+                            the default ones. Usage of this option will be
+                            reported on the report output and the metadata file
+                            upon export.
       --zone-thresholds ZONE_THRESHOLDS, -zt ZONE_THRESHOLDS
                             If set the zone thresholds will be used instead of the
-                            default ones.
+                            default ones. Usage of this option will be reported on
+                            the report output and the metadata file upon export.
       --security-hub-query-filter SECURITY_HUB_QUERY_FILTER, -sf SECURITY_HUB_QUERY_FILTER
-                            If set the zone thresholds will be used instead of the
-                            default ones.
+                            If set, this filter will be used instead of the
+                            default built in. Usage of this option will be
+                            reported on the report output and the metadata file
+                            upon export. Usage of the allowed ips and denied ips
+                            options will still affect the filter as well as the
+                            default set frameworks. If no framework filtering is
+                            needed the built in default frameworks can be
+                            overriden by calling the "-f" option with "" as an
+                            argument.
       --validate-metadata-file VALIDATE_METADATA_FILE, -vm VALIDATE_METADATA_FILE
-                            Validates a metadata file. Warning, if this argument
-                            is set any other argument is effectively disregarded
-                            and only the file provided is processed.
-      --version, -v         Prints the version of the tool.
+                            Validates a metadata file. If this argument is set any
+                            other argument is effectively disregarded and only the
+                            file provided is processed.
+      --version, -v         Prints the version of the tool. If this argument is
+                            set any other argument is effectively disregarded.

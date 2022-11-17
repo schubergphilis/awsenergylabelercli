@@ -206,28 +206,35 @@ def get_parser():
                         '-at',
                         type=account_thresholds_config,
                         default=os.environ.get('AWS_LABELER_ACCOUNT_THRESHOLDS'),
-                        help='If set the account thresholds will be used instead of the default ones.')
+                        help='If set the account thresholds will be used instead of the default ones. Usage of this '
+                             'option will be reported on the report output and the metadata file upon export.')
     parser.add_argument('--zone-thresholds',
                         '-zt',
                         type=zone_thresholds_config,
                         default=os.environ.get('AWS_LABELER_ZONE_THRESHOLDS'),
-                        help='If set the zone thresholds will be used instead of the default ones.')
+                        help='If set the zone thresholds will be used instead of the default ones. Usage of this option'
+                             ' will be reported on the report output and the metadata file upon export.')
     parser.add_argument('--security-hub-query-filter',
                         '-sf',
                         type=json_string,
                         default=os.environ.get('AWS_LABELER_SECURITY_HUB_QUERY_FILTER'),
-                        help='If set the zone thresholds will be used instead of the default ones.')
+                        help='If set, this filter will be used instead of the default built in. Usage of this option '
+                             'will be reported on the report output and the metadata file upon export. Usage of the '
+                             'allowed ips and denied ips options will still affect the filter as well as the default '
+                             'set frameworks. If no framework filtering is needed the built in default frameworks can '
+                             'be overriden by calling the "-f" option with "" as an argument.')
     parser.add_argument('--validate-metadata-file',
                         '-vm',
                         action=OverridingArgument,
                         type=valid_local_file,
-                        help='Validates a metadata file. Warning, if this argument is set any other argument is '
+                        help='Validates a metadata file. If this argument is set any other argument is '
                              'effectively disregarded and only the file provided is processed.')
     parser.add_argument('--version',
                         '-v',
                         action=OverridingArgument,
                         nargs=0,
-                        help='Prints the version of the tool.')
+                        help='Prints the version of the tool. If this argument is set any other argument is effectively'
+                             ' disregarded. ')
     parser.set_defaults(export_all=True)
     return parser
 
