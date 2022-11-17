@@ -60,6 +60,7 @@ from awsenergylabelerlib import (validate_regions,
 
 from ._version import __version__ as cli_version
 from .awsenergylabelercliexceptions import MissingRequiredArguments, MutuallyExclusiveArguments
+from .entities import MetadataEntry
 from .validators import (account_thresholds_config,
                          aws_account_id,
                          character_delimited_list_variable,
@@ -411,7 +412,8 @@ def get_zone_reporting_data(zone_name,
                             zone_thresholds,
                             security_hub_query_filter,
                             log_level,
-                            zone_type):
+                            zone_type,
+                            metadata):
     """Gets the reporting data for an organizations zone.
 
     Args:
@@ -429,6 +431,7 @@ def get_zone_reporting_data(zone_name,
         zone_thresholds:
         log_level: The log level set.
         zone_type: The type of zone to label.
+        metadata: The metadata of the execution, provided to be enriched by the active ones.
 
     Returns:
         report_data, exporter_arguments
@@ -474,13 +477,19 @@ def get_zone_reporting_data(zone_name,
                                                 query_filter,
                                                 log_level,
                                                 'suppressed')
-        report_data.append(['Suppressed Findings:', len(suppressed_findings)])
+        metadata.add_entry(MetadataEntry(title='Suppressed Findings:',
+                                         value=str(len(suppressed_findings)),
+                                         is_report_entry=True))
+    metadata.add_entry(MetadataEntry(title='Enabled Security Hub Integrations:',
+                                     value=labeler.security_hub.enabled_products,
+                                     is_report_entry=False))
     export_types = ALL_ZONE_EXPORT_TYPES if export_all_data_flag else ZONE_METRIC_EXPORT_TYPES
     exporter_arguments = {'export_types': export_types,
                           'name': labeler.zone.name,
                           'energy_label': labeler.zone_energy_label.label,
                           'security_hub_findings': labeler.security_hub_findings,
-                          'labeled_accounts': labeler.zone_labeled_accounts}
+                          'labeled_accounts': labeler.zone_labeled_accounts,
+                          'metadata': metadata}
     return report_data, exporter_arguments
 
 
@@ -495,7 +504,8 @@ def get_account_reporting_data(account_id,
                                report_suppressed_findings,
                                account_thresholds,
                                security_hub_query_filter,
-                               log_level):
+                               log_level,
+                               metadata):
     """Gets the reporting data for a single account.
 
     Args:
@@ -510,6 +520,7 @@ def get_account_reporting_data(account_id,
         account_thresholds: The account thresholds to apply.
         security_hub_query_filter: The security hub filter to apply.
         log_level: The log level set.
+        metadata: The metadata of the execution, provided to be enriched by the active ones.
 
     Returns:
         report_data, exporter_arguments
@@ -552,11 +563,17 @@ def get_account_reporting_data(account_id,
                                                           denied_account_ids=None,
                                                           frameworks=frameworks)
         suppressed_findings = wait_for_findings(security_hub.get_findings, query_filter, log_level, 'suppressed')
-        report_data.append(['Suppressed Findings:', len(suppressed_findings)])
+        metadata.add_entry(MetadataEntry(title='Suppressed Findings:',
+                                         value=str(len(suppressed_findings)),
+                                         is_report_entry=True))
+    metadata.add_entry(MetadataEntry(title='Enabled Security Hub Integrations:',
+                                     value=security_hub.enabled_products,
+                                     is_report_entry=False))
     export_types = ALL_ACCOUNT_EXPORT_TYPES if export_all_data_flag else ACCOUNT_METRIC_EXPORT_TYPES
     exporter_arguments = {'export_types': export_types,
                           'name': account.id,
                           'energy_label': account.energy_label.label,
                           'security_hub_findings': security_hub_findings,
-                          'labeled_accounts': account}
+                          'labeled_accounts': account,
+                          'metadata': metadata}
     return report_data, exporter_arguments
