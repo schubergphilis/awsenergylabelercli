@@ -122,3 +122,43 @@ History
 ------------------
 
 * Made region a required argument
+
+
+3.0.0 (17-11-2022)
+------------------
+
+* Major update including the possibility to create a metadata file containing details on the execution.
+* Now audit zones are supported, for environments without access to AWS Organizations. 
+* It is possible to use custom SecurityHub query filters and score thresholds.
+
+
+4.0.0 (17-11-2022)
+------------------
+
+* Major update including the possibility to create a metadata file containing details on the execution.
+* Now audit zones are supported, for environments without access to AWS Organizations.
+* It is possible to use custom SecurityHub query filters and score thresholds.
+
+
+5.0.0 (17-11-2022)
+------------------
+
+* Major update including the possibility to create a metadata file containing details on the execution.
+* Now audit zones are supported, for environments without access to AWS Organizations.
+* It is possible to use custom SecurityHub query filters and score thresholds.
+
+
+6.0.0 (17-11-2022)
+------------------
+
+* Major update including the possibility to create a metadata file containing details on the execution.
+* Now audit zones are supported, for environments without access to AWS Organizations.
+* It is possible to use custom SecurityHub query filters and score thresholds.
+
+
+7.0.0 (17-11-2022)
+------------------
+
+* Major update including the possibility to create a metadata file containing details on the execution.
+* Now audit zones are supported, for environments without access to AWS Organizations.
+* It is possible to use custom SecurityHub query filters and score thresholds.
