@@ -502,9 +502,26 @@ class TestAuditZone(TestZone):
 
 class TestSingleAccount(TestZone):
 
+    def setUp(self):
+        super(TestSingleAccount, self).setUp()
+        self.invalid_single_account = '123456789012a'
+        self.invalid_account_id_error_message = (f'argument --single-account-id/-s: Account id '
+                                                 f'{self.invalid_single_account} provided does not seem to be valid.')
+
     def test_missing_single_account(self):
         parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1'])
         self.assertTrue(parsing_error_message == self.missing_arguments_message)
+
+    def test_invalid_single_account_argument_provided(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '-s', self.invalid_single_account])
+        self.assertTrue(parsing_error_message == self.invalid_account_id_error_message)
+
+    def test_invalid_single_account_long_argument_provided(self):
+        parsing_error_message = get_parsing_error_message(get_arguments, ['-r', 'eu-west-1',
+                                                                          '--single-account-id',
+                                                                          self.invalid_single_account])
+        self.assertTrue(parsing_error_message == self.invalid_account_id_error_message)
 
     def test_valid_single_account_argument_provided(self):
         valid_single_account = '123456789012'
