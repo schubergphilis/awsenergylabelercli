@@ -170,3 +170,9 @@ History
 * Major update including the possibility to create a metadata file containing details on the execution.
 * Now audit zones are supported, for environments without access to AWS Organizations.
 * It is possible to use custom SecurityHub query filters and score thresholds.
+
+
+3.0.1 (23-11-2022)
+------------------
+
+* Reporting on enabled integrations in SecurityHub
