@@ -176,3 +176,10 @@ History
 ------------------
 
 * Reporting on enabled integrations in SecurityHub
+
+
+
+3.1.0 (23-11-2022)
+------------------
+
+* Reporting on enabled integrations in SecurityHub
