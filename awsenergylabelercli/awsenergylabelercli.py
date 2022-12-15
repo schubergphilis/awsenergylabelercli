@@ -224,6 +224,12 @@ def get_parser():
                              'allowed ips and denied ips options will still affect the filter as well as the default '
                              'set frameworks. If no framework filtering is needed the built in default frameworks can '
                              'be overriden by calling the "-f" option with "" as an argument.')
+    parser.add_argument('--disable-spinner',
+                        '-ds',
+                        action='store_true',
+                        default=environment_variable_boolean(os.environ.get('AWS_LABELER_DISABLE_SPINNER',
+                                                                            False)),
+                        help='If set spinner will be disabled on the CLI.')
     parser.add_argument('--validate-metadata-file',
                         '-vm',
                         action=OverridingArgument,
@@ -370,7 +376,7 @@ def setup_logging(level, config_file=None):
         coloredlogs.install(level=level.upper())
 
 
-def wait_for_findings(method_name, method_argument, log_level, finding_type=None):
+def wait_for_findings(method_name, method_argument, log_level, finding_type=None, disable_spinner=False):
     """If log level is not debug shows a spinner while the callable provided gets security hub findings.
 
     Args:
@@ -378,13 +384,14 @@ def wait_for_findings(method_name, method_argument, log_level, finding_type=None
         method_argument: The argument to pass to the method.
         log_level: The log level as set by the user.
         finding_type: The type of the finding to use for the helping message.
+        disable_spinner: The spinner will be disabled while retrieving the findings.
 
     Returns:
         findings: A list of security hub findings as retrieved by the callable.
 
     """
     try:
-        if log_level != 'debug':
+        if all([log_level != 'debug', not disable_spinner]):
             with yaspin(text=f"Please wait while retrieving Security Hub{f' {finding_type} ' if finding_type else ' '}"
                              f"findings...", color="yellow") as spinner:
                 findings = method_name(method_argument) if method_argument else method_name()
@@ -413,7 +420,8 @@ def get_zone_reporting_data(zone_name,
                             security_hub_query_filter,
                             log_level,
                             zone_type,
-                            metadata):
+                            metadata,
+                            disable_spinner):
     """Gets the reporting data for an organizations zone.
 
     Args:
@@ -432,6 +440,7 @@ def get_zone_reporting_data(zone_name,
         log_level: The log level set.
         zone_type: The type of zone to label.
         metadata: The metadata of the execution, provided to be enriched by the active ones.
+        disable_spinner: The spinner will be disabled while retrieving the findings.
 
     Returns:
         report_data, exporter_arguments
@@ -448,7 +457,7 @@ def get_zone_reporting_data(zone_name,
                             allowed_regions=allowed_regions,
                             denied_regions=denied_regions,
                             zone_type=zone_type)
-    wait_for_findings(EnergyLabeler.security_hub_findings.fget, labeler, log_level)
+    wait_for_findings(EnergyLabeler.security_hub_findings.fget, labeler, log_level, disable_spinner=disable_spinner)
     report_data = [['Zone:', labeler.zone.name],
                    ['Zone Security Score:', labeler.zone_energy_label.label],
                    ['Zone Percentage Coverage:', labeler.zone_energy_label.coverage],
@@ -466,7 +475,8 @@ def get_zone_reporting_data(zone_name,
         # resolved_findings = wait_for_findings(labeler.security_hub.get_findings,
         #                                       query_filter,
         #                                       log_level,
-        #                                       'resolved')
+        #                                       'resolved',
+        #                                       disable_spinner=disable_spinner)
         # report_data.append([f'Resolved Findings Last {report_closed_findings_days} Days:', len(resolved_findings)])
     if report_suppressed_findings:
         query_filter = labeler.security_hub.calculate_query_filter(SUPPRESSED_FINDINGS_QUERY,
@@ -476,7 +486,8 @@ def get_zone_reporting_data(zone_name,
         suppressed_findings = wait_for_findings(labeler.security_hub.get_findings,
                                                 query_filter,
                                                 log_level,
-                                                'suppressed')
+                                                'suppressed',
+                                                disable_spinner=disable_spinner)
         metadata.add_entry(MetadataEntry(title='Suppressed Findings:',
                                          value=str(len(suppressed_findings)),
                                          is_report_entry=True))
@@ -505,7 +516,8 @@ def get_account_reporting_data(account_id,
                                account_thresholds,
                                security_hub_query_filter,
                                log_level,
-                               metadata):
+                               metadata,
+                               disable_spinner):
     """Gets the reporting data for a single account.
 
     Args:
@@ -521,6 +533,7 @@ def get_account_reporting_data(account_id,
         security_hub_query_filter: The security hub filter to apply.
         log_level: The log level set.
         metadata: The metadata of the execution, provided to be enriched by the active ones.
+        disable_spinner: The spinner will be disabled while retrieving the findings.
 
     Returns:
         report_data, exporter_arguments
@@ -534,7 +547,8 @@ def get_account_reporting_data(account_id,
                                                       allowed_account_ids=[account_id],
                                                       denied_account_ids=None,
                                                       frameworks=frameworks)
-    unfiltered_findings = wait_for_findings(security_hub.get_findings, query_filter, log_level)
+    unfiltered_findings = wait_for_findings(security_hub.get_findings, query_filter, log_level,
+                                            disable_spinner=disable_spinner)
     security_hub_findings = security_hub.filter_findings_by_frameworks(unfiltered_findings, frameworks)
     account.calculate_energy_label(security_hub_findings)
     report_data = [['Account ID:', account.id],
@@ -555,14 +569,16 @@ def get_account_reporting_data(account_id,
         # resolved_findings = wait_for_findings(security_hub.get_findings,
         #                                       query_filter,
         #                                       log_level,
-        #                                       'resolved')
+        #                                       'resolved',
+        #                                       disable_spinner=disable_spinner)
         # report_data.append([f'Resolved Findings Last {report_closed_findings_days} Days:', len(resolved_findings)])
     if report_suppressed_findings:
         query_filter = SecurityHub.calculate_query_filter(SUPPRESSED_FINDINGS_QUERY,
                                                           allowed_account_ids=[account_id],
                                                           denied_account_ids=None,
                                                           frameworks=frameworks)
-        suppressed_findings = wait_for_findings(security_hub.get_findings, query_filter, log_level, 'suppressed')
+        suppressed_findings = wait_for_findings(security_hub.get_findings, query_filter, log_level, 'suppressed',
+                                                disable_spinner=disable_spinner)
         metadata.add_entry(MetadataEntry(title='Suppressed Findings:',
                                          value=str(len(suppressed_findings)),
                                          is_report_entry=True))

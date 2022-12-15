@@ -125,7 +125,8 @@ def _get_reporting_arguments(args):
                         'export_all_data_flag': args.export_all,
                         'security_hub_query_filter': args.security_hub_query_filter,
                         'log_level': args.log_level,
-                        'metadata': execution_metadata}
+                        'metadata': execution_metadata,
+                        'disable_spinner': args.disable_spinner}
     if args.single_account_id:
         get_reporting_data = get_account_reporting_data
         method_arguments.update({'account_id': args.single_account_id})
