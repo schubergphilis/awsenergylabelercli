@@ -155,7 +155,7 @@ def default_environment_variable(variable_name):
                 kwargs['default'] = os.environ[variable_name]
             if kwargs.get('required') and kwargs.get('default'):
                 kwargs['required'] = False
-            super(DefaultEnvVar, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
 
         def __call__(self, parser, namespace, values, option_string=None):
             setattr(namespace, self.dest, values)

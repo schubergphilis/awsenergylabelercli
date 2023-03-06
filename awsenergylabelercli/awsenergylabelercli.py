@@ -282,7 +282,7 @@ def validate_metadata_file(file_path, parser):
 
     """
     try:
-        with open(file_path, 'r') as ifile:
+        with open(file_path, 'r', encoding='utf-8') as ifile:
             LOGGER.debug(f'Received local file "{file_path}" to validate.')
             contents = ifile.read()
             data = json.loads(contents)
@@ -311,13 +311,13 @@ def get_arguments(arguments=None):  # noqa: MC0001
     if args.validate_metadata_file:
         # if overriding argument is set then we do not check any other arguments and we exit straight
         # after validating the argument
-        raise validate_metadata_file(args.validate_metadata_file, parser)
+        validate_metadata_file(args.validate_metadata_file, parser)
     # Since mutual exclusive cannot work with environment variables we need to check explicitly for all pairs of
     # mutual relations that are not allowed.
     if all([args.allowed_account_ids, args.denied_account_ids]):
-        raise parser.error('argument --allowed-account-ids/-a: not allowed with argument --denied-account-ids/-d')
+        parser.error('argument --allowed-account-ids/-a: not allowed with argument --denied-account-ids/-d')
     if all([args.allowed_regions, args.denied_regions]):
-        raise parser.error('argument --allowed-regions/-ar: not allowed with argument --denied-regions/-dr')
+        parser.error('argument --allowed-regions/-ar: not allowed with argument --denied-regions/-dr')
     export_metrics_set = environment_variable_boolean(os.environ.get('AWS_LABELER_EXPORT_ONLY_METRICS'))
     if export_metrics_set:
         args.export_all = False
@@ -325,35 +325,35 @@ def get_arguments(arguments=None):  # noqa: MC0001
     try:
         _ = get_mutually_exclusive_args(*exclusive_args, required=True)
     except MissingRequiredArguments:
-        raise parser.error('one of the arguments --organizations-zone-name/-o --audit-zone-name/-z '
-                           '--single-account-id/-s is required')
+        parser.error('one of the arguments --organizations-zone-name/-o --audit-zone-name/-z '
+                     '--single-account-id/-s is required')
     except MutuallyExclusiveArguments:
-        raise parser.error('arguments --organizations-zone-name/-o --audit-zone-name/-z '
-                           '--single-account-id/-s are mutually exclusive')
+        parser.error('arguments --organizations-zone-name/-o --audit-zone-name/-z '
+                     '--single-account-id/-s are mutually exclusive')
     exclusive_args = [args.allowed_account_ids, args.denied_account_ids, args.single_account_id]
     try:
         _ = get_mutually_exclusive_args(*exclusive_args)
     except MutuallyExclusiveArguments:
-        raise parser.error('arguments --allowed-account-ids/-a --denied-account-ids/-d --single-account-id/-s are '
-                           'mutually exclusive')
+        parser.error('arguments --allowed-account-ids/-a --denied-account-ids/-d --single-account-id/-s are '
+                     'mutually exclusive')
     try:
         SecurityHub.validate_frameworks(args.frameworks)
     except InvalidFrameworks:
-        raise parser.error(f'{args.frameworks} are not valid supported security hub frameworks. Currently supported '
-                           f'are {SecurityHub.frameworks}')
+        parser.error(f'{args.frameworks} are not valid supported security hub frameworks. Currently supported '
+                     f'are {SecurityHub.frameworks}')
     for argument in ['allowed_account_ids', 'denied_account_ids']:
         try:
             _ = validate_account_ids(getattr(args, argument))
         except InvalidAccountListProvided:
-            raise parser.error(f'{getattr(args, argument)} contains invalid account ids.')
+            parser.error(f'{getattr(args, argument)} contains invalid account ids.')
     for argument in ['allowed_regions', 'denied_regions']:
         try:
             _ = validate_regions(getattr(args, argument))
         except InvalidRegionListProvided:
-            raise parser.error(f'{getattr(args, argument)} contains invalid regions.')
+            parser.error(f'{getattr(args, argument)} contains invalid regions.')
     if args.export_path and not DestinationPath(args.export_path).is_valid():
-        raise parser.error(f'{args.export_path} is an invalid export location. Example --export-path '
-                           f'/a/directory or --export-path s3://mybucket location')
+        parser.error(f'{args.export_path} is an invalid export location. Example --export-path '
+                     f'/a/directory or --export-path s3://mybucket location')
     return args
 
 
@@ -369,15 +369,15 @@ def setup_logging(level, config_file=None):
     # If there's no config file, logging will default to stdout.
     if config_file:
         try:
-            with open(config_file) as conf_file:
+            with open(config_file, encoding='utf-8') as conf_file:
                 configuration = json.loads(conf_file.read())
                 logging.config.dictConfig(configuration)
         except ValueError:
             print(f'File "{config_file}" is not valid json, cannot continue.')
-            raise SystemExit(1)
+            raise SystemExit(1) from None
         except FileNotFoundError:
             print(f'File "{config_file}" does not exist or cannot be read, cannot continue.')
-            raise SystemExit(1)
+            raise SystemExit(1) from None
     else:
         coloredlogs.install(level=level.upper())
 
@@ -406,7 +406,7 @@ def wait_for_findings(method_name, method_argument, log_level, finding_type=None
             findings = method_name(method_argument) if method_argument else method_name()
     except Exception as msg:
         LOGGER.error(msg)
-        raise SystemExit(1)
+        raise SystemExit(1) from None
     return findings
 
 
