@@ -147,7 +147,7 @@ def default_environment_variable(variable_name):
 
     """
 
-    class DefaultEnvVar(argparse.Action):  # pylint: disable=too-few-public-methods
+    class DefaultEnvVar(argparse.Action):
         """Default Environment Variable."""
 
         def __init__(self, *args, **kwargs):
@@ -223,7 +223,7 @@ def zone_thresholds_config(value):
     return config
 
 
-class OverridingArgument(argparse.Action):  # pylint: disable=too-few-public-methods
+class OverridingArgument(argparse.Action):
     """Argument that if set will disable all other arguments that are set as required."""
 
     def __call__(self, parser, namespace, values, option_string=None):

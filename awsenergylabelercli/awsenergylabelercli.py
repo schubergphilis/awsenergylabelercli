@@ -230,6 +230,12 @@ def get_parser():
                         default=environment_variable_boolean(os.environ.get('AWS_LABELER_DISABLE_SPINNER',
                                                                             False)),
                         help='If set spinner will be disabled on the CLI.')
+    parser.add_argument('--disable-banner',
+                        '-db',
+                        action='store_true',
+                        default=environment_variable_boolean(os.environ.get('AWS_LABELER_DISABLE_SPINNER',
+                                                                            False)),
+                        help='If set banner will be disabled on the CLI.')
     parser.add_argument('--validate-metadata-file',
                         '-vm',
                         action=OverridingArgument,
