@@ -233,7 +233,7 @@ def get_parser():
     parser.add_argument('--disable-banner',
                         '-db',
                         action='store_true',
-                        default=environment_variable_boolean(os.environ.get('AWS_LABELER_DISABLE_SPINNER',
+                        default=environment_variable_boolean(os.environ.get('AWS_LABELER_DISABLE_BANNER',
                                                                             False)),
                         help='If set banner will be disabled on the CLI.')
     parser.add_argument('--validate-metadata-file',
