@@ -143,3 +143,9 @@ History
 ------------------
 
 * Reporting on enabled integrations in SecurityHub
+
+
+3.2.0 (08-03-2023)
+------------------
+
+* Added flag to disable printing the banner
