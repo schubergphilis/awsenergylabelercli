@@ -182,7 +182,8 @@ def main():
     if not args.frameworks:
         LOGGER.info('No frameworks have been provided for filtering.')
     try:
-        print(text2art("AWS Energy Labeler"))
+        if not args.disable_banner:
+            print(text2art("AWS Energy Labeler"))
         report_data, exporter_arguments = _get_reporting_arguments(args)
         if args.export_path:
             LOGGER.info(f'Trying to export data to the requested path : {args.export_path}')
