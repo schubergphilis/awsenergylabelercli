@@ -149,3 +149,9 @@ History
 ------------------
 
 * Added flag to disable printing the banner
+
+
+3.2.1 (10-03-2023)
+------------------
+
+* Bump dependencies.
