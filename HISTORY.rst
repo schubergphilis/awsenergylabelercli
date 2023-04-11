@@ -155,3 +155,9 @@ History
 ------------------
 
 * Bump dependencies.
+
+
+3.2.2 (11-04-2023)
+------------------
+
+* Added support for Python3.11
