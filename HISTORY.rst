@@ -161,3 +161,9 @@ History
 ------------------
 
 * Added support for Python3.11
+
+
+3.2.3 (13-04-2023)
+------------------
+
+* Bumped library - Changed dataclass to normal class
