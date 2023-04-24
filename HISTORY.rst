@@ -167,3 +167,9 @@ History
 ------------------
 
 * Bumped library - Changed dataclass to normal class
+
+
+3.2.4 (24-04-2023)
+------------------
+
+* Bumped library to support read-only filesystems when exporting to S3
