@@ -173,3 +173,9 @@ History
 ------------------
 
 * Bumped library to support read-only filesystems when exporting to S3
+
+
+3.2.5 (06-06-2023)
+------------------
+
+* Implement support for consolidated findings.
