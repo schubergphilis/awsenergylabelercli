@@ -50,6 +50,9 @@ from awsenergylabelerlib import (validate_regions,
                                  ZONE_THRESHOLDS,
                                  DEFAULT_SECURITY_HUB_FILTER,
                                  DEFAULT_SECURITY_HUB_FRAMEWORKS,
+                                 AWS_FOUNDATIONAL_SECURITY_FRAMEWORK,
+                                 CIS_AWS_FOUNDATION_FRAMEWORK,
+                                 PCI_DSS_FRAMEWORK,
                                  ALL_ZONE_EXPORT_TYPES,
                                  ZONE_METRIC_EXPORT_TYPES,
                                  ALL_ACCOUNT_EXPORT_TYPES,
@@ -146,9 +149,10 @@ def get_parser():
                         '-f',
                         default=os.environ.get('AWS_LABELER_FRAMEWORKS', DEFAULT_SECURITY_HUB_FRAMEWORKS),
                         type=character_delimited_list_variable,
-                        help='The list of applicable frameworks: ["aws-foundational-security-best-practices", '
-                             '"cis", "pci-dss"], default=["aws-foundational-security-best-practices"]. '
-                             'Setting the flag with an empty string argument will set no frameworks for filters.')
+                        help=f"The list of applicable frameworks: ['{AWS_FOUNDATIONAL_SECURITY_FRAMEWORK}', "
+                             f"'{CIS_AWS_FOUNDATION_FRAMEWORK}', '{PCI_DSS_FRAMEWORK}'], "
+                             f"default={list(DEFAULT_SECURITY_HUB_FRAMEWORKS)}. "
+                             "Setting the flag with an empty string argument will set no frameworks for filters.")
     parser.add_argument('--allowed-account-ids',
                         '-a',
                         action=default_environment_variable('AWS_LABELER_ALLOWED_ACCOUNT_IDS'),

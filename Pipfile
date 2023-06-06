@@ -26,10 +26,11 @@ toml = ">=0.1,<1.0"
 [packages]
 
 coloredlogs = ">=15.0,<16.0"
-awsenergylabelerlib = ">=3.2.4,<4.0"
+awsenergylabelerlib = ">=4.0,<5.0"
 yaspin = ">=2.1.0,<3.0"
 terminaltables = ">=3.1.0,<4.0"
 art = ">=5.3,<6.0"
+
 
 [requires]
 python_version = "3.9"
