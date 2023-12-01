@@ -568,8 +568,6 @@ def get_account_reporting_data(account_id,
                    ['Number Of Medium Findings:', account.energy_label.number_of_medium_findings],
                    ['Number Of Low Findings:', account.energy_label.number_of_low_findings],
                    ['Max Days Open:', account.energy_label.max_days_open]]
-    if account.alias:
-        report_data.append(['Account Alias:', account.alias])
     if report_closed_findings_days:
         LOGGER.warning('Reporting on resolved findings is not functional yet.')
         # query_filter = SecurityHub.calculate_query_filter(RESOLVED_FINDINGS_QUERY(report_closed_findings_days),
