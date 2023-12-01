@@ -179,3 +179,9 @@ History
 ------------------
 
 * Implement support for consolidated findings.
+
+
+3.2.6 (01-12-2023)
+------------------
+
+* Update dependencies.
