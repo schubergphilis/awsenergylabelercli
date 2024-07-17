@@ -185,3 +185,18 @@ History
 ------------------
 
 * Update dependencies.
+
+4.0.0 (06-06-2023)
+------------------
+
+* Implement support for finding consolidation.
+
+5.0.0 (01-12-2023)
+------------------
+
+* Remove alias functionality since it was not working properly.
+
+5.0.1 (01-12-2023)
+------------------
+
+* Fix upload mechanism and bump dependency versions.

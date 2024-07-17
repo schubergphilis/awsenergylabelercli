@@ -26,6 +26,7 @@ Usage
                                  [--account-thresholds ACCOUNT_THRESHOLDS]
                                  [--zone-thresholds ZONE_THRESHOLDS]
                                  [--security-hub-query-filter SECURITY_HUB_QUERY_FILTER]
+                                 [--disable-spinner][--disable-banner]
                                  [--validate-metadata-file VALIDATE_METADATA_FILE]
                                  [--version]
 
@@ -114,6 +115,10 @@ Usage
                             needed the built in default frameworks can be
                             overriden by calling the "-f" option with "" as an
                             argument.
+      --disable-spinner, -ds
+                            If set spinner will be disabled on the CLI.
+      --disable-banner, -db
+                            If set banner will be disabled on the CLI.
       --validate-metadata-file VALIDATE_METADATA_FILE, -vm VALIDATE_METADATA_FILE
                             Validates a metadata file. If this argument is set any
                             other argument is effectively disregarded and only the
