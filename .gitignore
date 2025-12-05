@@ -62,3 +62,13 @@ env
 
 # Visual studio code
 .vscode
+
+run.sh
+output
+
+awsenergylabelercli/.VERSION
+awsenergylabelercli/AUTHORS.rst
+awsenergylabelercli/CONTRIBUTING.rst
+awsenergylabelercli/HISTORY.rst
+awsenergylabelercli/LICENSE
+awsenergylabelercli/README.rst

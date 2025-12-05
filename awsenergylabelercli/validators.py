@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # File: validators.py
 #
 # Copyright 2022 Theodoor Scholte, Costas Tyfoxylos, Jenda Brands
@@ -39,26 +38,34 @@ import re
 from argparse import ArgumentTypeError
 from pathlib import Path
 
-from schema import SchemaUnexpectedTypeError, SchemaError
-from awsenergylabelerlib import (is_valid_account_id,
-                                 is_valid_region,
-                                 SECURITY_HUB_ACTIVE_REGIONS)
-from awsenergylabelerlib.schemas import account_thresholds_schema, zone_thresholds_schema
+from awsenergylabelerlib import (
+    SECURITY_HUB_ACTIVE_REGIONS,
+    is_valid_account_id,
+    is_valid_region,
+)
+from awsenergylabelerlib.schemas import (
+    account_thresholds_schema,
+    zone_thresholds_schema,
+)
+from schema import SchemaError, SchemaUnexpectedTypeError
 
-from .awsenergylabelercliexceptions import MutuallyExclusiveArguments, MissingRequiredArguments
+from .awsenergylabelercliexceptions import (
+    MissingRequiredArgumentsError,
+    MutuallyExclusiveArgumentsError,
+)
 
-__author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
-__docformat__ = '''google'''
-__date__ = '''08-04-2022'''
-__copyright__ = '''Copyright 2022, Costas Tyfoxylos'''
-__credits__ = ["Theodoor Scholte", "Costas Tyfoxylos", "Jenda Brands"]
-__license__ = '''MIT'''
-__maintainer__ = '''Costas Tyfoxylos'''
-__email__ = '''<ctyfoxylos@schubergphilis.com>'''
-__status__ = '''Development'''  # "Prototype", "Development", "Production".
+__author__ = """Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>"""
+__docformat__ = """google"""
+__date__ = """08-04-2022"""
+__copyright__ = """Copyright 2022, Costas Tyfoxylos"""
+__credits__ = ["Theodoor Scholte", "Costas Tyfoxylos", "Jenda Brands", "Joeri Abbo"]
+__license__ = """MIT"""
+__maintainer__ = """Costas Tyfoxylos"""
+__email__ = """<ctyfoxylos@schubergphilis.com>"""
+__status__ = """Development"""  # "Prototype", "Development", "Production".
 
 # This is the main prefix used for logging
-LOGGER_BASENAME = '''validators'''
+LOGGER_BASENAME = """validators"""
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
@@ -66,21 +73,25 @@ LOGGER.addHandler(logging.NullHandler())
 def aws_account_id(account_id):
     """Setting a type for an account id argument."""
     if not is_valid_account_id(account_id):
-        raise ArgumentTypeError(f'Account id {account_id} provided does not seem to be valid.')
+        msg = f"Account id {account_id} provided does not seem to be valid."
+        raise ArgumentTypeError(msg)
     return account_id
 
 
 def security_hub_region(region):
     """Setting a type for a security hub region."""
     if not is_valid_region(region):
-        raise ArgumentTypeError(f'Region {region} provided does not seem to be valid, valid regions are '
-                                f'{SECURITY_HUB_ACTIVE_REGIONS}.')
+        msg = (
+            f"Region {region} provided does not seem to be valid, valid regions are "
+            f"{SECURITY_HUB_ACTIVE_REGIONS}."
+        )
+        raise ArgumentTypeError(msg)
     return region
 
 
 def character_delimited_list_variable(value):
     """Support for environment variables with characters delimiting a list of value."""
-    delimiting_characters = '[,|\\s]'
+    delimiting_characters = "[,|\\s]"
     result = [entry for entry in re.split(delimiting_characters, str(value)) if entry]
     if len(result) == 1:
         return result[0]
@@ -97,9 +108,7 @@ def environment_variable_boolean(value):
         True if environment variable is one of the supported values, False otherwise.
 
     """
-    if value in [True, 't', 'T', 'true', 'True', 1, '1', 'TRUE']:
-        return True
-    return False
+    return value in [True, "t", "T", "true", "True", 1, "1", "TRUE"]
 
 
 def positive_integer(value):
@@ -122,7 +131,8 @@ def positive_integer(value):
     except ValueError:
         num_value = -1
     if num_value <= 0:
-        raise ArgumentTypeError(f'{value} is an invalid positive int value')
+        msg = f"{value} is an invalid positive int value"
+        raise ArgumentTypeError(msg)
     return num_value
 
 
@@ -130,9 +140,9 @@ def get_mutually_exclusive_args(*args, required=False):
     """Test if multiple mutually exclusive arguments are provided."""
     set_arguments = [arg for arg in args if arg]
     if len(set_arguments) > 1:
-        raise MutuallyExclusiveArguments(*set_arguments)
+        raise MutuallyExclusiveArgumentsError(*set_arguments)
     if required and not any(set_arguments):
-        raise MissingRequiredArguments()
+        raise MissingRequiredArgumentsError
     return args
 
 
@@ -152,12 +162,12 @@ def default_environment_variable(variable_name):
 
         def __init__(self, *args, **kwargs):
             if variable_name in os.environ:
-                kwargs['default'] = os.environ[variable_name]
-            if kwargs.get('required') and kwargs.get('default'):
-                kwargs['required'] = False
+                kwargs["default"] = os.environ[variable_name]
+            if kwargs.get("required") and kwargs.get("default"):
+                kwargs["required"] = False
             super().__init__(*args, **kwargs)
 
-        def __call__(self, parser, namespace, values, option_string=None):
+        def __call__(self, _parser, namespace, values, _option_string=None):
             setattr(namespace, self.dest, values)
 
     return DefaultEnvVar
@@ -181,7 +191,8 @@ def json_string(value):
     try:
         json_value = json.loads(value)
     except ValueError:
-        raise ArgumentTypeError(f'{value} is an invalid json string.') from None
+        msg = f"{value} is an invalid json string."
+        raise ArgumentTypeError(msg) from None
     return json_value
 
 
@@ -199,8 +210,8 @@ def account_thresholds_config(value):
     try:
         config = account_thresholds_schema.validate(config)
     except (SchemaUnexpectedTypeError, SchemaError):
-        raise ArgumentTypeError(
-            f'Provided configuration {value} is an invalid accounts thresholds configuration.') from None
+        msg = f"Provided configuration {value} is an invalid accounts thresholds configuration."
+        raise ArgumentTypeError(msg) from None
     return config
 
 
@@ -218,27 +229,31 @@ def zone_thresholds_config(value):
     try:
         config = zone_thresholds_schema.validate(config)
     except (SchemaUnexpectedTypeError, SchemaError):
-        raise ArgumentTypeError(
-            f'Provided configuration {value} is an invalid zone thresholds configuration.') from None
+        msg = f"Provided configuration {value} is an invalid zone thresholds configuration."
+        raise ArgumentTypeError(msg) from None
     return config
 
 
 class OverridingArgument(argparse.Action):
     """Argument that if set will disable all other arguments that are set as required."""
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(self, parser, namespace, values, _option_string=None):
         # If we get here, it means that the argument is set so any other argument that has been configured as required
         # will have it's required attribute disabled due to this overriding argument being called.
-        for argument in parser._actions:  # noqa
+        for argument in parser._actions:  # noqa: SLF001
             if argument.required:
                 # this will not log as the logger is set up up after the parsing of arguments. Message is left as
                 # documentation and can be turned into a print statement for debugging.
-                LOGGER.info(f'Argument {argument.dest} is required, overriding that to not required due to argument '
-                            f'{self.dest} set as overriding argument which will disable all other required arguments.')
+                LOGGER.info(
+                    "Argument %s is required, overriding that to not required due to argument "
+                    "%s set as overriding argument which will disable all other required arguments.",
+                    argument.dest,
+                    self.dest,
+                )
                 argument.required = False
         # if we get here there has been an argument provided so to support flag arguments if no actual value has been
         # provided we set the argument to True. Assumption is that the argument has been configured with nargs=0.
-        values = True if not values else values
+        values = values if values else True
         setattr(namespace, self.dest, values)
 
 
@@ -257,5 +272,6 @@ def valid_local_file(local_path):
     """
     path_file = Path(local_path)
     if not path_file.exists():
-        raise ArgumentTypeError(f'Local file path "{local_path}" provided, does not exist.')
+        msg = f'Local file path "{local_path}" provided, does not exist.'
+        raise ArgumentTypeError(msg)
     return path_file.resolve()

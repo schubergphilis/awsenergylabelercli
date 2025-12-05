@@ -1,4 +1,4 @@
-name: build
+name: CI/CD Pipeline
 
 on:
   push:
@@ -8,54 +8,147 @@ on:
     branches: [ 'main' ]
   workflow_dispatch:
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+env:
+  PYTHON_VERSION: "3.14"
 
+jobs:
+  lint:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
-          python-version: 3.9.15
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
 
-      - name: Install pipenv
-        run: pip install pipenv
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pylint ruff
 
-      - name: Lint
-        run: _CI/scripts/lint.py
+      - name: Run Ruff linter
+        run: ruff check . 
 
-      - name: Test
-        run: _CI/scripts/test.py
+      - name: Run Pylint
+        run: pylint awsenergylabelercli/ aws_energy_labeler_cli.py
 
-      - name: Build
-        run: _CI/scripts/build.py
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["${{ env.PYTHON_VERSION }}"]
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v5
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r dev-requirements.txt
+
+      - name: Run tests with pytest
+        run: |
+          python -m pytest tests/ \
+            --cov=awsenergylabelercli \
+            --cov-report=html:test-output/coverage \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --junit-xml=test-output/junit.xml
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v5
+        if: matrix.python-version == '3.14'
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: |
+            test-output/
+            coverage.xml
+
+  build:
+    name: Build Package
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Copy required files
+        run: |
+          cp .VERSION awsenergylabelercli/
+          cp LICENSE awsenergylabelercli/
+          cp AUTHORS.rst awsenergylabelercli/
+          cp CONTRIBUTING.rst awsenergylabelercli/
+          cp HISTORY.rst awsenergylabelercli/
+          cp README.rst awsenergylabelercli/
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check package
+        run: twine check dist/*
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: package-artifacts
+          path: dist/
 
   release:
+    name: Release to PyPI
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
-    needs: build
+    needs: [lint, test, build]
     runs-on: ubuntu-latest
-    environment:
-      name: release
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Download build artifacts
+        uses: actions/download-artifact@v6
         with:
-          python-version: 3.9.15
+          name: package-artifacts
+          path: dist/
 
-      - name: Install pipenv
-        run: pip install pipenv
+      - name: Set up Python for publishing
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Upload
-        run: _CI/scripts/upload.py
+      - name: Install twine
+        run: |
+          python -m pip install --upgrade pip
+          pip install twine
 
+      - name: Publish to PyPI
         env:
-
-          PYPI_UPLOAD_USERNAME: ${{ secrets.PYPI_UPLOAD_USERNAME }}
-          PYPI_UPLOAD_PASSWORD: ${{ secrets.PYPI_UPLOAD_PASSWORD }}
+          TWINE_USERNAME: ${{ secrets.PYPI_UPLOAD_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_UPLOAD_PASSWORD }}
+        run: |
+          python -m twine upload dist/* --skip-existing
 

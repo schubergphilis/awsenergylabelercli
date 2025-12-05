@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # File: __init__.py
 #
 # Copyright 2021 Theodoor Scholte, Costas Tyfoxylos, Jenda Brands
@@ -32,28 +31,30 @@ Import all parts from awsenergylabelercli here
    http://google.github.io/styleguide/pyguide.html
 """
 from ._version import __version__
-from .awsenergylabelercli import (calculate_file_hash,
-                                  get_account_reporting_data,
-                                  get_arguments,
-                                  get_parser,
-                                  get_zone_reporting_data,
-                                  setup_logging)
+from .awsenergylabelercli import (
+    calculate_file_hash,
+    get_account_reporting_data,
+    get_arguments,
+    get_parser,
+    get_zone_reporting_data,
+    setup_logging,
+)
 
-__author__ = '''Theodoor Scholte <tscholte@schubergphilis.com>'''
-__docformat__ = '''google'''
-__date__ = '''11-11-2021'''
-__copyright__ = '''Copyright 2021, Theodoor Scholte'''
-__license__ = '''MIT'''
-__maintainer__ = '''Theodoor Scholte'''
-__email__ = '''<tscholte@schubergphilis.com>'''
-__status__ = '''Development'''  # "Prototype", "Development", "Production".
+__author__ = """Theodoor Scholte <tscholte@schubergphilis.com>"""
+__docformat__ = """google"""
+__date__ = """11-11-2021"""
+__copyright__ = """Copyright 2021, Theodoor Scholte"""
+__license__ = """MIT"""
+__maintainer__ = """Theodoor Scholte"""
+__email__ = """<tscholte@schubergphilis.com>"""
+__status__ = """Development"""  # "Prototype", "Development", "Production".
 
 # This is to 'use' the module(s), so lint doesn't complain
-assert __version__
+_ = __version__
 
-assert calculate_file_hash
-assert get_account_reporting_data
-assert get_arguments
-assert get_parser
-assert get_zone_reporting_data
-assert setup_logging
+_ = calculate_file_hash
+_ = get_account_reporting_data
+_ = get_arguments
+_ = get_parser
+_ = get_zone_reporting_data
+_ = setup_logging

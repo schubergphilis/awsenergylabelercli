@@ -1,6 +1,8 @@
 [FORMAT]
 max-line-length=121
-disable=locally-disabled, locally-enabled, logging-format-interpolation, logging-fstring-interpolation
+
+[MESSAGES CONTROL]
+disable=locally-disabled, logging-format-interpolation, logging-fstring-interpolation, astroid-error, duplicate-code, import-error, wrong-import-order, ungrouped-imports, R0917
 
 [General]
 init-hook='import sys; sys.path.append("awsenergylabelercli")'

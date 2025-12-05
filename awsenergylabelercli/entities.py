@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # File: entities.py
 #
 # Copyright 2022 Costas Tyfoxylos
@@ -33,19 +32,18 @@ Import all parts from entities here
 """
 
 import logging
-
 from dataclasses import dataclass
 
-__author__ = 'Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'
-__docformat__ = '''google'''
-__date__ = '''15-11-2022'''
-__copyright__ = '''Copyright 2022, Costas Tyfoxylos'''
-__license__ = '''MIT'''
-__maintainer__ = '''Costas Tyfoxylos'''
-__email__ = '''<ctyfoxylos@schubergphilis.com>'''
-__status__ = '''Development'''  # "Prototype", "Development", "Production".
+__author__ = "Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>"
+__docformat__ = """google"""
+__date__ = """15-11-2022"""
+__copyright__ = """Copyright 2022, Costas Tyfoxylos"""
+__license__ = """MIT"""
+__maintainer__ = """Costas Tyfoxylos"""
+__email__ = """<ctyfoxylos@schubergphilis.com>"""
+__status__ = """Development"""  # "Prototype", "Development", "Production".
 
-LOGGER_BASENAME = '''entities'''
+LOGGER_BASENAME = """entities"""
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
@@ -76,7 +74,8 @@ class Metadata:
 
         """
         if not isinstance(entry, MetadataEntry):
-            raise ValueError('Only MetadataEntry objects are allowed.')
+            msg = "Only MetadataEntry objects are allowed."
+            raise TypeError(msg)
         self._data.append(entry)
 
     @property
@@ -97,4 +96,6 @@ class Metadata:
             A list of entry data lists to be reported in an interactive report.
 
         """
-        return [[entry.title, entry.value] for entry in self._data if entry.is_report_entry]
+        return [
+            [entry.title, entry.value] for entry in self._data if entry.is_report_entry
+        ]

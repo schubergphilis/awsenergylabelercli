@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # File: awsenergylabelercliexceptions.py
 #
 # Copyright 2021 Theodoor Scholte, Costas Tyfoxylos, Jenda Brands
@@ -31,20 +30,20 @@ Custom exception code for awsenergylabelercli.
 
 """
 
-__author__ = '''Theodoor Scholte <tscholte@schubergphilis.com>'''
-__docformat__ = '''google'''
-__date__ = '''11-11-2021'''
-__copyright__ = '''Copyright 2021, Theodoor Scholte'''
-__credits__ = ["Theodoor Scholte", "Costas Tyfoxylos", "Jenda Brands"]
-__license__ = '''MIT'''
-__maintainer__ = '''Theodoor Scholte'''
-__email__ = '''<tscholte@schubergphilis.com>'''
-__status__ = '''Development'''  # "Prototype", "Development", "Production".
+__author__ = """Theodoor Scholte <tscholte@schubergphilis.com>"""
+__docformat__ = """google"""
+__date__ = """11-11-2021"""
+__copyright__ = """Copyright 2021, Theodoor Scholte"""
+__credits__ = ["Theodoor Scholte", "Costas Tyfoxylos", "Jenda Brands", "Joeri Abbo"]
+__license__ = """MIT"""
+__maintainer__ = """Theodoor Scholte"""
+__email__ = """<tscholte@schubergphilis.com>"""
+__status__ = """Development"""  # "Prototype", "Development", "Production".
 
 
-class MutuallyExclusiveArguments(Exception):
+class MutuallyExclusiveArgumentsError(Exception):
     """Mutually exclusive variables are set."""
 
 
-class MissingRequiredArguments(Exception):
+class MissingRequiredArgumentsError(Exception):
     """Missing a required argument."""
